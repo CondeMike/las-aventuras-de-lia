@@ -1,453 +1,1372 @@
+/* =========================================================================
+   Las Aventuras de Lía — hoja de estilo del Reino Cuadrado
+   Cada escena ocupa la pantalla completa: fondo vivo, HUD arriba, tablero al
+   centro y la voz de Nubo abajo. El color de acento lo pone cada escena
+   mediante la variable --acento.
+   ========================================================================= */
+
 :root {
-  --tinta: #38264a;
-  --morado: #70449a;
-  --morado-oscuro: #51316f;
-  --oro: #f7bd48;
-  --crema: #fff3ce;
-  --verde: #79b85a;
-  --rosa: #ee7891;
-  font-family: "Trebuchet MS", Verdana, system-ui, sans-serif;
-  color: var(--tinta);
+  --noche:      #150c26;
+  --noche-2:    #241543;
+  --tinta:      #2b1a44;
+  --crema:      #fff6de;
+  --oro:        #ffc94a;
+  --oro-hondo:  #b97a1c;
+  --verde:      #6fd36a;
+  --rosa:       #ff7fa8;
+  --acento:     #ffc94a;
+
+  --sombra-texto: 0 2px 0 #2a0f3d, 0 6px 18px #05010ccc;
+  --panel: linear-gradient(160deg, #fffaeb 0%, #ffeec2 55%, #f4d79a 100%);
+  --vidrio: linear-gradient(160deg, #3b2263cc, #1d1136dd);
+
+  /* TRES MATERIALES, Y NINGUNO MÁS.
+     Las once ilustraciones se construyen con piedra (lo que sostiene), oro
+     (lo conseguido, lo que se puede tocar) y cristal (lo mágico, lo que se
+     pregunta). La interfaz usaba un cuarto material que no aparece en ninguna
+     imagen: el vidrio esmerilado de las apps. Un backdrop-filter desenfoca el
+     mundo detrás y con eso anuncia "la historia se detiene, haz el ejercicio". */
+  --piedra-luz:   #9d85cc;
+  --piedra-cara:  #4d3b72;
+  --piedra-media: #3a2a5b;
+  --piedra-honda: #2a1c48;
+  --piedra-base:  #1c1132;
+  --oro-luz:      #fff3c4;
+  --cristal-luz:  #eaffff;
+  --cristal:      #5fd8ff;
+  --cristal-hondo:#1a6ec0;
+
+  font-family: "Trebuchet MS", "Avenir Next", Verdana, system-ui, sans-serif;
+  color: var(--crema);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 
+html, body { height: 100%; }
+
 body {
   margin: 0;
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: #251b3d;
-  overflow-x: hidden;
+  background: var(--noche);
+  color: var(--crema);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-button { font: inherit; }
+button { font: inherit; color: inherit; }
 
-.juego {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: clamp(12px, 3vw, 32px);
-}
+/* ---------------------------------------------------------------- escena */
+
+.juego { height: 100dvh; }
 
 .escena {
   position: relative;
   isolation: isolate;
-  width: min(100%, 1000px);
-  min-height: min(720px, calc(100dvh - 24px));
-  padding: clamp(18px, 4vw, 46px);
-  border: 7px solid #7c4b2d;
-  border-radius: 30px;
-  background-image: linear-gradient(#26184735, #25163555), url("../assets/reino-cuadrado/castillo-panoramico.png");
-  background-size: cover;
-  background-position: center;
-  box-shadow: 0 15px 0 #4b2c24, 0 25px 50px #38264a55;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100dvh;
   overflow: hidden;
   text-align: center;
-  animation: entrar-escena .55s cubic-bezier(.2,.8,.2,1) both;
 }
 
-.escena::before {
+/* Fondo con un zoom lentísimo: el mundo respira sin distraer. */
+.telon {
+  position: absolute;
+  inset: -4%;
+  z-index: -3;
+  background-size: cover;
+  background-repeat: no-repeat;
+  animation: respirar 34s ease-in-out infinite alternate, revelar .9s ease-out both;
+}
+
+.telon-tinte {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% 20%, transparent 46%, #0e0720a0 100%),
+    linear-gradient(#12062640 0%, #0d061914 38%, #0d0619e0 100%);
+}
+
+/* Parallax suave: el telón se mueve la mitad que el follaje delantero. Va por
+   la propiedad `translate`, no por `transform`, para no pisar el zoom lento. */
+.telon { translate: calc(var(--px, 0) * 9px) calc(var(--py, 0) * 5px); }
+
+/* En las once ilustraciones la cámara está DENTRO del mundo: siempre hay hojas
+   o roca ocluyendo las esquinas. Sin esto, la interfaz mira la escena desde
+   fuera, como quien mira por una ventana. */
+.follaje {
+  position: absolute;
+  inset: -6px 0 auto 0;
+  z-index: -1;
+  height: clamp(84px, 21vh, 200px);
+  pointer-events: none;
+  background: url("../assets/ui/follaje.svg") top center / 100% 100% no-repeat;
+  translate: calc(var(--px, 0) * -19px) calc(var(--py, 0) * -9px);
+}
+
+@keyframes respirar { from { transform: scale(1) } to { transform: scale(1.09) } }
+/* Solo opacidad: si tocara transform, congelaría el zoom lento de "respirar". */
+@keyframes revelar  { from { opacity: 0 } }
+
+/* Partículas doradas flotando. */
+.chispas { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.chispas i {
+  position: absolute;
+  left: calc(var(--i) * 9.5% + 3%);
+  bottom: -12px;
+  /* Destello de cuatro puntas, el que aparece en el cofre, en la corona de
+     Quatron y en las torres del castillo. Y de paso, el número del juego. */
+  width: calc(9px + var(--i) * 1px); aspect-ratio: 1;
+  clip-path: polygon(50% 0, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0 50%, 41% 41%);
+  background: var(--acento);
+  filter: drop-shadow(0 0 7px var(--acento));
+  opacity: 0;
+  animation: subir calc(9s + var(--i) * 1.3s) linear infinite;
+  animation-delay: calc(var(--i) * -1.7s);
+}
+@keyframes subir {
+  0%   { opacity: 0; transform: translateY(0) scale(.5) }
+  12%  { opacity: .85 }
+  80%  { opacity: .5 }
+  100% { opacity: 0; transform: translateY(-96dvh) translateX(28px) scale(1.15) }
+}
+
+/* -------------------------------------------------------------------- HUD */
+
+.hud {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: clamp(8px, 2vw, 16px) clamp(10px, 3vw, 26px);
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(#0c0518cc, #0c051800);
+}
+
+.hud-mundo { justify-self: start; display: grid; text-align: left; line-height: 1.1; text-shadow: var(--sombra-texto); }
+.hud-mundo b { font-size: clamp(.9rem, 2.4vw, 1.15rem); letter-spacing: .02em; }
+.hud-mundo small { color: #ffe9b0b0; font-size: clamp(.65rem, 1.7vw, .82rem); }
+
+.cristalera { display: flex; gap: clamp(6px, 1.6vw, 12px); }
+/* El cristal del arco de la puerta: rombo facetado con luz propia. Apagado es
+   una silueta hueca; encendido tiene la luz DENTRO, no un borde brillante. */
+.cristal {
+  position: relative;
+  width: clamp(22px, 4.8vw, 32px);
+  height: clamp(28px, 6.2vw, 40px);
+  background: #ffffff12;
+  clip-path: polygon(50% 0, 100% 34%, 74% 100%, 26% 100%, 0 34%);
+  box-shadow: inset 0 0 0 2px #ffffff38;
+  transition: .4s;
+}
+.cristal::before {
+  content: "";
+  position: absolute; inset: 0;
+  clip-path: polygon(50% 0, 100% 34%, 50% 54%, 0 34%);
+  background: #ffffff26;
+  transition: .4s;
+}
+.cristal--vivo {
+  background: linear-gradient(168deg, var(--cristal-luz) 0%, var(--cristal) 46%, var(--cristal-hondo) 100%);
+  box-shadow: inset 0 0 0 2px #eaffffcc, inset 0 0 14px #ffffff8c;
+  filter: drop-shadow(0 0 10px #62dcffcc) drop-shadow(0 0 26px #3aa8ff88);
+  animation: latir 2.6s ease-in-out infinite;
+  animation-delay: calc(var(--r) * .25s);
+}
+.cristal--vivo::before { background: #ffffff9e; }
+@keyframes latir { 50% { transform: translateY(-3px) scale(1.06) } }
+
+.hud-controles { justify-self: end; display: flex; gap: 8px; }
+.pastilla {
+  display: grid; place-items: center;
+  min-width: 42px; min-height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(var(--piedra-cara), var(--piedra-honda));
+  box-shadow: inset 0 2px 0 var(--piedra-luz), inset 0 0 0 2px #b97a1c8c, 0 4px 10px -3px #000000a6;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: .18s;
+}
+.pastilla:hover, .pastilla:focus-visible { background: #3a1c63; border-color: var(--acento); transform: translateY(-2px); }
+
+/* ----------------------------------------------------------------- lienzo */
+
+.lienzo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 2vh, 20px);
+  min-height: 0;
+  padding: clamp(6px, 1.6vh, 18px) clamp(12px, 4vw, 34px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff33 transparent;
+}
+.lienzo::-webkit-scrollbar { width: 6px; }
+.lienzo::-webkit-scrollbar-thumb { background: #ffffff33; border-radius: 99px; }
+
+/* ------------------------------------------------------------- tipografía */
+
+.titulo {
+  margin: 0;
+  font-size: clamp(1.7rem, 5.4vw, 3.4rem);
+  line-height: 1.02;
+  letter-spacing: -.01em;
+  color: #fffdf3;
+  text-shadow: var(--sombra-texto);
+  animation: entrar .55s cubic-bezier(.2,.9,.25,1) both;
+}
+.titulo--epico {
+  background: linear-gradient(#fff8dd 30%, var(--oro) 62%, #e0921f 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 0 #6a3a12) drop-shadow(0 10px 22px #0009);
+  font-size: clamp(2rem, 7.6vw, 4.4rem);
+}
+/* El nombre de la escena es un rótulo de capítulo: sitúa, no enseña. Antes
+   ocupaba 2.4rem mientras el hecho que hay que recordar vivía en 0.92rem al
+   69 % de opacidad, es decir, la jerarquía visual estaba al revés de la
+   jerarquía de aprendizaje. */
+.titulo--reto {
+  font-size: clamp(.95rem, 2.6vw, 1.15rem);
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: #ffe9b8;
+  opacity: 1;
+}
+.titulo--premio { color: #fff3c4; text-shadow: 0 0 26px #ffd15e, var(--sombra-texto); }
+.titulo--jefe   { color: #d8f4ff; text-shadow: 0 0 24px #45c8ff, var(--sombra-texto); }
+.titulo--misterio { color: #ffd0b0; letter-spacing: .12em; text-shadow: 0 0 30px #ff6a2a88, var(--sombra-texto); }
+
+.lema {
+  margin: 0;
+  padding: .38rem 1.05rem;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(#2c1e4d, #1a0f31);
+  box-shadow: inset 0 0 0 2px #b97a1c8c, inset 0 2px 0 #ffd8753d, 0 6px 14px -5px #000000a6;
+  font-size: clamp(.9rem, 2.4vw, 1.2rem);
+  text-shadow: 0 2px 6px #000a;
+  animation: entrar .6s .08s cubic-bezier(.2,.9,.25,1) both;
+}
+
+@keyframes entrar { from { opacity: 0; transform: translateY(16px) } }
+
+/* ------------------------------------------------------------------ voz */
+
+.voz {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  gap: clamp(8px, 2vw, 16px);
+  padding: clamp(8px, 2vw, 14px) clamp(12px, 4vw, 30px) clamp(12px, 3vw, 22px);
+  background: linear-gradient(#0c051800, #0c0518d9 42%, #0c0518);
+}
+
+.voz-retrato {
+  width: clamp(56px, 13vw, 96px);
+  filter: drop-shadow(0 6px 14px #000a) drop-shadow(0 0 16px var(--acento));
+  animation: flotar 3.4s ease-in-out infinite;
+}
+@keyframes flotar { 50% { transform: translateY(-7px) rotate(-2deg) } }
+
+.voz-globo {
+  position: relative;
+  padding: clamp(10px, 2.4vw, 16px) clamp(14px, 3vw, 22px);
+  border: 0;
+  border-radius: 18px 18px 18px 5px;
+  background: linear-gradient(var(--piedra-cara), var(--piedra-honda));
+  box-shadow:
+    inset 0 2px 0 var(--piedra-luz),
+    inset 0 0 0 2px #1a0f30,
+    0 8px 0 -3px var(--piedra-base),
+    0 16px 28px -8px #000000a6;
+  text-align: left;
+}
+.voz-globo p { margin: 0; font-size: clamp(.92rem, 2.5vw, 1.18rem); line-height: 1.35; }
+.voz-nombre {
+  display: block;
+  margin-bottom: .15rem;
+  color: var(--acento);
+  font-size: clamp(.68rem, 1.9vw, .8rem);
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.voz-acciones { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+/* --------------------------------------------------------------- botones */
+
+.boton {
+  --base: var(--oro);
+  --hondo: var(--oro-hondo);
+  position: relative;
+  min-height: 56px;
+  padding: .7rem clamp(1.2rem, 4vw, 2.2rem);
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(#fff0b6 0%, var(--base) 46%, var(--hondo) 100%);
+  color: #4a2a08;
+  font-size: clamp(1rem, 2.9vw, 1.3rem);
+  font-weight: 900;
+  letter-spacing: .01em;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 6px 0 var(--hondo), 0 12px 26px #00000073, inset 0 2px 0 #fffffff0;
+  transition: transform .12s, box-shadow .12s, filter .2s;
+}
+.boton::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 38%, #ffffffb0 48%, transparent 58%);
+  transform: translateX(-130%);
+  animation: brillo 4.5s ease-in-out infinite;
+}
+@keyframes brillo { 0%, 62% { transform: translateX(-130%) } 78%, 100% { transform: translateX(130%) } }
+.boton:hover  { filter: brightness(1.06); transform: translateY(-2px); }
+.boton:active { transform: translateY(5px); box-shadow: 0 1px 0 var(--hondo), 0 4px 12px #0007, inset 0 2px 0 #fffffff0; }
+.boton:disabled { filter: grayscale(.45) brightness(.8); cursor: default; transform: none; }
+
+.boton--calma { --base: #b9a7d8; --hondo: #6a5490; color: #291842; }
+.boton--pista {
+  --base: #63b6e8; --hondo: #2b6d9d;
+  min-height: 46px;
+  padding: .5rem 1.1rem;
+  border-radius: 14px;
+  color: #06263c;
+  font-size: clamp(.85rem, 2.2vw, 1rem);
+  display: block;
+  margin: .9rem auto 0;
+}
+
+:focus-visible { outline: 3px solid #7cf3ff; outline-offset: 3px; }
+/* El h1 recibe el foco solo para anunciar la escena a un lector de pantalla:
+   no es un control, así que no debe dibujar recuadro. */
+h1[tabindex]:focus, h1[tabindex]:focus-visible,
+.mensaje[tabindex]:focus, .mensaje[tabindex]:focus-visible { outline: none; }
+
+/* --------------------------------------------------------------- portada */
+
+.rotulo { display: grid; gap: .5rem; place-items: center; }
+
+.elenco { display: flex; align-items: flex-end; justify-content: center; gap: clamp(10px, 4vw, 34px); }
+.retrato { margin: 0; display: grid; justify-items: center; gap: .3rem; animation: entrar .7s .12s cubic-bezier(.2,.9,.25,1) both; }
+.retrato img {
+  width: clamp(92px, 24vw, 170px);
+  filter: drop-shadow(0 10px 22px #000b);
+  animation: flotar 4.6s ease-in-out infinite;
+}
+.retrato--nubo img { animation-delay: -1.6s; filter: drop-shadow(0 10px 22px #000b) drop-shadow(0 0 22px #6fd0ff88); }
+.retrato figcaption {
+  padding: .2rem .8rem;
+  border-radius: 99px;
+  background: #1a0f31b8;
+  font-size: clamp(.75rem, 2vw, .95rem);
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.medallero { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.medalla {
+  display: grid;
+  gap: 0;
+  min-width: 88px;
+  padding: .5rem .9rem;
+  border: 0;
+  border-radius: 14px 14px 6px 6px;
+  background: linear-gradient(var(--piedra-cara), var(--piedra-honda));
+  box-shadow:
+    inset 0 2px 0 var(--piedra-luz),
+    inset 0 0 0 2px #1a0f30,
+    0 6px 0 -3px var(--piedra-base),
+    0 12px 22px -8px #000000a6;
+}
+.medalla b { color: var(--acento); font-size: clamp(1.2rem, 3.6vw, 1.7rem); line-height: 1; }
+.medalla small { color: #ffeec7b3; font-size: clamp(.62rem, 1.8vw, .76rem); }
+
+/* ------------------------------------------------------------------ mapa */
+
+.ruta {
+  display: grid;
+  gap: clamp(8px, 1.8vh, 14px);
+  width: min(100%, 470px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Cada parada es un mojón de piedra del camino, con su cristal engastado.
+   Antes eran tres tarjetas de vidrio esmerilado sobre el castillo. */
+.nodo {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: clamp(9px, 2vw, 14px) clamp(12px, 3vw, 20px);
+  border: 0;
+  border-radius: 16px 16px 7px 7px;
+  background: linear-gradient(var(--piedra-cara), var(--piedra-honda));
+  text-align: left;
+  box-shadow:
+    inset 0 2px 0 var(--piedra-luz),
+    inset 0 0 0 2px #1a0f30,
+    0 7px 0 -3px var(--piedra-base),
+    0 14px 24px -8px #000000a6;
+  animation: entrar .55s cubic-bezier(.2,.9,.25,1) both;
+  animation-delay: calc(var(--n) * .09s);
+}
+.nodo-gema {
+  display: grid; place-items: center;
+  width: 42px; height: 48px;
+  clip-path: polygon(50% 0, 100% 34%, 74% 100%, 26% 100%, 0 34%);
+  background: #0e0722;
+  box-shadow: inset 0 6px 18px #000000a6;
+  color: #ffffff2e;
+  font-size: 1.35rem;
+}
+.nodo-texto { display: grid; line-height: 1.2; }
+.nodo-texto b { font-size: clamp(.95rem, 2.6vw, 1.15rem); }
+.nodo-texto small { color: #ffeec7a8; font-size: clamp(.72rem, 2vw, .88rem); }
+
+.nodo--logrado .nodo-gema {
+  color: #eaffff;
+  background: linear-gradient(168deg, var(--cristal-luz), var(--cristal) 46%, var(--cristal-hondo));
+  box-shadow: inset 0 0 14px #ffffff8c;
+  filter: drop-shadow(0 0 10px #52d5ffcc);
+}
+.nodo--activo {
+  box-shadow:
+    inset 0 2px 0 #ffe6a8,
+    inset 0 0 0 3px var(--oro-hondo),
+    0 7px 0 -3px #7d4f10,
+    0 0 34px #ffc94a4d,
+    0 14px 24px -8px #000000a6;
+  animation: entrar .55s .18s cubic-bezier(.2,.9,.25,1) both, palpita 2.2s 1s ease-in-out infinite;
+}
+.nodo--activo .nodo-gema {
+  color: #3a230a;
+  background: linear-gradient(158deg, #fffdf0, var(--oro-luz) 30%, var(--oro) 64%, #c98a1e);
+  box-shadow: inset 0 0 14px #ffffff7a;
+  filter: drop-shadow(0 0 14px var(--oro));
+}
+.nodo--lejano { opacity: .5; filter: saturate(.35); }
+@keyframes palpita {
+  50% { box-shadow:
+    inset 0 2px 0 #ffe6a8,
+    inset 0 0 0 3px var(--oro),
+    0 7px 0 -3px #7d4f10,
+    0 0 52px #ffc94a80,
+    0 14px 24px -8px #000000a6 }
+}
+
+/* ----------------------------------------------------------------- retos */
+
+/* El panel ya no es una tarjeta flotante: es una placa de piedra apoyada en el
+   suelo de la escena, con su canto iluminado arriba, su grosor abajo y su
+   sombra proyectada hacia atrás. Sin desenfoque: el mundo se sigue viendo. */
+.panel {
+  position: relative;
+  width: fit-content;
+  max-width: min(100%, 720px);
+  padding: clamp(24px, 4.2vw, 38px) clamp(18px, 3.6vw, 34px) clamp(16px, 2.8vw, 24px);
+  border: 0;
+  border-radius: 22px 22px 9px 9px;
+  background:
+    radial-gradient(circle at 22% 28%, #ffffff10 0 2px, transparent 3px),
+    radial-gradient(circle at 71% 64%, #00000024 0 3px, transparent 4px),
+    radial-gradient(circle at 88% 16%, #ffffff0c 0 2px, transparent 3px),
+    linear-gradient(var(--piedra-cara) 0%, var(--piedra-media) 46%, var(--piedra-honda) 100%);
+  background-size: 128px 128px, 92px 92px, 168px 168px, auto;
+  box-shadow:
+    inset 0 3px 0 var(--piedra-luz),
+    inset 0 -16px 24px -12px #0e0720,
+    inset 0 0 0 2px #1a0f30,
+    0 13px 0 -4px var(--piedra-base),
+    0 26px 40px -10px #000000b0;
+  animation: entrar .5s cubic-bezier(.2,.9,.25,1) both;
+}
+/* La banda de oro remachada del cofre, cruzando el canto de la placa. */
+.panel::before {
   content: "";
   position: absolute;
-  inset: 14px;
-  border: 2px solid #ffd97877;
-  border-radius: 18px;
+  inset: 9px 9px auto 9px;
+  height: 13px;
+  border-radius: 11px 11px 5px 5px;
+  background:
+    radial-gradient(circle at 11px 50%, #fff8e0 0 2px, transparent 3px),
+    radial-gradient(circle at calc(100% - 11px) 50%, #fff8e0 0 2px, transparent 3px),
+    linear-gradient(var(--oro-luz), var(--oro) 55%, var(--oro-hondo));
+  box-shadow: 0 2px 0 #7d4f10, 0 5px 12px #00000059;
+}
+/* La clave del arco: engaste dorado con la gema dentro, como en la puerta. */
+.panel::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 50%;
+  width: clamp(26px, 5vw, 34px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -52%) rotate(45deg);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 50%, var(--cristal-luz) 0 15%, var(--cristal) 16% 27%, transparent 28%),
+    linear-gradient(135deg, var(--oro-luz), var(--oro) 46%, var(--oro-hondo));
+  box-shadow: 0 0 0 3px #7d4f10, 0 6px 14px #00000080, 0 0 22px #5fd8ff4d;
+}
+.panel--respuesta { animation-delay: .1s; }
+
+/* Los grupos ya no viven en una caja. Se apoyan en el suelo de la escena, como
+   los canteros del jardín, que es de donde salieron. Dos rectángulos apilados
+   son una ficha de trabajo con dos apartados; un objeto es un objeto. */
+.tarea {
+  display: grid;
+  justify-items: center;
+  gap: clamp(8px, 1.6vh, 14px);
+  animation: entrar .5s cubic-bezier(.2,.9,.25,1) both;
+}
+
+/* La etapa deja de ser una píldora —no hay ni una píldora en las once
+   ilustraciones— y pasa a ser un sello de oro clavado en la piedra. Y en
+   minúsculas: las versalitas cuestan de leer a quien está aprendiendo. */
+.etapa {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  margin-bottom: .6rem;
+  padding: .2rem .8rem .2rem .22rem;
+  border-radius: 6px 12px 12px 6px;
+  background: linear-gradient(#ffffff1c, #00000024);
+  box-shadow: inset 0 1px 0 #ffffff30, inset 0 -1px 0 #00000045;
+  color: #ffeccb;
+  font-size: clamp(.74rem, 2vw, .9rem);
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.etapa b {
+  display: grid; place-items: center;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, #fffbe8 0 26%, transparent 27%),
+    linear-gradient(var(--oro-luz), var(--oro) 52%, var(--oro-hondo));
+  color: #4a2a08;
+  font-size: .88rem;
+  box-shadow: 0 2px 0 #7d4f10, 0 3px 8px #00000073, inset 0 0 0 2px #ffffff42;
+}
+
+.grupos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(8px, 2vw, 15px);
+  justify-content: center;
+}
+/* El montículo del jardín: masa de hoja arriba, tierra abajo, y una sombra
+   propia en el suelo. La micro-rotación por --orden evita que los grupos
+   parezcan diez copias del mismo sello. */
+.grupo {
+  position: relative;
+  padding: clamp(9px, 2vw, 14px) clamp(10px, 2vw, 15px) clamp(13px, 2.4vw, 18px);
+  border: 3px solid #d9a24f;
+  border-radius: 46% 46% 20px 20px / 40% 40% 18px 18px;
+  background:
+    radial-gradient(ellipse 70% 46% at 34% 20%, #a6ef86 0%, #8ce07a2e 42%, transparent 70%),
+    linear-gradient(#3e8a58 0%, #2c6f48 44%, #17472f 74%, #3a2d18 75%, #241a0e 100%);
+  box-shadow:
+    inset 0 0 22px #9ef56a3d,
+    inset 0 3px 0 #b6f39c5c,
+    inset 0 -3px 0 #00000059,
+    0 8px 16px -6px #00000085;
+  transform: rotate(calc(var(--orden) * 1.1deg - 1.6deg));
+  animation: brotar .45s cubic-bezier(.2,1.5,.4,1) backwards;
+  animation-delay: calc(var(--orden) * .07s);
+  transition: box-shadow .3s, transform .3s, filter .3s;
+}
+/* La sombra que el montículo proyecta en el suelo de la escena. */
+.grupo::after {
+  content: "";
+  position: absolute;
+  left: 6%; right: 6%; bottom: -9px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, #00000091, transparent 74%);
+}
+@keyframes brotar { from { opacity: 0; transform: translateY(14px) scale(.82) } }
+
+.grupo-num {
+  position: absolute;
+  top: -11px; left: 50%;
+  display: grid; place-items: center;
+  width: 25px; height: 25px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, #fffbe8 0 24%, transparent 25%),
+    linear-gradient(var(--oro-luz), var(--oro) 54%, var(--oro-hondo));
+  color: #4a2a08;
+  font-size: .82rem;
+  font-weight: 900;
+  transform: translateX(-50%);
+  box-shadow: 0 2px 0 #7d4f10, 0 4px 8px #00000080, inset 0 0 0 2px #ffffff40;
+}
+.grupo-piezas { display: grid; grid-template-columns: repeat(2, auto); gap: clamp(2px, .8vw, 6px); }
+.pieza { font-size: clamp(1.05rem, 3.4vw, 1.7rem); line-height: 1.1; }
+
+/* Muchos grupos (4×7 en adelante): en fila los diez se partían en 9 + 1, que no
+   se puede leer. En rejilla de cinco quedan 5 + 5, 5 + 4, 5 + 3, 5 + 2, y eso
+   ya no es una fila rota sino una matriz: la representación que hace visible
+   la multiplicación y permite "cinco grupos y dos más". */
+.grupos--muchos {
+  display: grid;
+  grid-template-columns: repeat(5, auto);
+  justify-content: center;
+  justify-items: center;
+  gap: clamp(5px, 1.2vw, 9px) clamp(6px, 1.4vw, 11px);
+}
+.grupos--muchos .grupo { padding: clamp(6px, 1.4vw, 10px) clamp(7px, 1.4vw, 11px); border-width: 2px; }
+.grupos--muchos .grupo-num { width: 20px; height: 20px; top: -9px; font-size: .68rem; }
+.grupos--muchos .pieza { font-size: clamp(.8rem, 2.4vw, 1.25rem); }
+
+.grupos--uno .grupo { padding: clamp(14px, 3vw, 22px) clamp(16px, 3vw, 24px); }
+.grupos--uno .pieza { font-size: clamp(1.5rem, 5vw, 2.4rem); }
+
+.grupos.brilla .grupo {
+  border-color: #ffe27a;
+  box-shadow: inset 0 0 26px #ffe98a, inset 0 3px 0 #fff5c9, 0 0 30px #ffd75faa;
+  transform: rotate(calc(var(--orden) * 1.1deg - 1.6deg)) translateY(-4px);
+}
+
+/* Andamios de ayuda: aparecen solo cuando hacen falta. */
+.conteo, .suma {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: .8rem auto 0;
+  padding: .4rem .7rem;
+  border-radius: 14px;
+  animation: entrar .35s both;
+}
+/* El conteo de 4 en 4 deja de ser una fila de fichas y pasa a ser la cuerda de
+   farolillos del jardín. Además de encajar con el arte, invita a tocarlos, que
+   es literalmente lo que pide la pista del nivel 1. */
+.conteo { padding-top: .95rem; background: none; border: 0; }
+.conteo span {
+  position: relative;
+  min-width: 2.3rem;
+  padding: .26rem .46rem .3rem;
+  clip-path: polygon(20% 0, 80% 0, 100% 26%, 92% 100%, 8% 100%, 0 26%);
+  background: linear-gradient(#fffae0 0%, #ffe08e 38%, #ffc94a 68%, #dd9a26 100%);
+  color: #4a2a08;
+  font-size: clamp(.85rem, 2.5vw, 1.1rem);
+  font-weight: 900;
+  filter: drop-shadow(0 0 9px #ffc94a7a) drop-shadow(0 3px 5px #00000073);
+}
+.conteo span::before {              /* el gancho del que cuelga */
+  content: "";
+  position: absolute;
+  top: -7px; left: 50%;
+  width: 3px; height: 8px;
+  background: #8a6026;
+  transform: translateX(-50%);
+}
+.conteo i { align-self: center; color: #a97e3e; font-style: normal; font-weight: 900; }
+
+/* La suma es una placa engastada en oro, no una píldora. */
+.suma {
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(#241938, #180f2b);
+  box-shadow: inset 0 0 0 3px #b97a1cbf, inset 0 2px 0 #ffd87540, 0 5px 12px -4px #000000a6;
+  color: #fff3cf;
+  font-size: clamp(.95rem, 2.8vw, 1.3rem);
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+
+/* El hecho, del tamaño que le corresponde. Mismo cuerpo que .operacion-jefe:
+   la pantalla del jefe ya lo hacía bien, las de aprender no. El "?" está desde
+   el primer segundo y se llena al acertar, para que se vea la ecuación
+   completarse en el sitio donde ya se estaba mirando. */
+.ecuacion-reto {
+  margin: 0 0 .35rem;
+  text-align: center;
+  font-size: clamp(2rem, 8vw, 3.4rem);
+  font-weight: 900;
+  line-height: 1.05;
+  color: #fff8e6;
+  text-shadow: 0 0 26px #ffc94a80, var(--sombra-texto);
+}
+.ecuacion-reto b { color: var(--oro); }
+
+/* Los dos puentes del símbolo: hacia la voz y hacia la imagen. Van en dos
+   renglones y no separados por un "·", porque no son una lista: son la misma
+   cosa dicha de dos maneras, y esa equivalencia es la lección. */
+.lectura {
+  display: grid;
+  gap: .12rem;
+  margin: 0 0 .7rem;
+  text-align: center;
+  line-height: 1.3;
+}
+.lectura span:first-child { color: #ffdf9e; font-size: clamp(.92rem, 2.7vw, 1.12rem); font-weight: 800; }
+.lectura span:last-child  { color: #fff4de; font-size: clamp(.85rem, 2.4vw, 1rem);    font-weight: 600; }
+
+.pregunta {
+  margin: 0 0 .5rem;
+  text-align: center;
+  color: #fffdf3;
+  font-size: clamp(.95rem, 2.8vw, 1.15rem);
+  font-weight: 700;
+}
+.pregunta b { color: var(--oro); }
+
+.opciones { display: flex; flex-wrap: wrap; gap: clamp(12px, 3vw, 22px); justify-content: center; }
+
+/* La respuesta es un cristal, no un caramelo. Prisma facetado como los del
+   claro del bosque: una cara que recibe la luz, otra en sombra, y un engaste
+   de oro alrededor. El volumen lo da drop-shadow, porque clip-path recorta
+   cualquier box-shadow exterior. */
+.gema {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: clamp(80px, 21vw, 118px);
+  min-height: clamp(76px, 18vw, 102px);
+  padding: .45rem .7rem;
+  border: 0;
+  clip-path: polygon(50% 0, 100% 30%, 86% 100%, 14% 100%, 0 30%);
+  background: linear-gradient(158deg, #a97cf3 0%, #7c4cd8 34%, #4d2ba0 66%, #2c1869 100%);
+  color: #fff8e2;
+  font-size: clamp(1.5rem, 5.4vw, 2.4rem);
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 28px #ffffff2e;
+  text-shadow: 0 2px 4px #1a0b33;
+  --filo:
+    drop-shadow(1.6px 0 0 #ffd875) drop-shadow(-1.6px 0 0 #ffd875)
+    drop-shadow(0 1.6px 0 #ffd875) drop-shadow(0 -1.6px 0 #ffd875);
+  filter: var(--filo) drop-shadow(0 7px 0 #2b1657) drop-shadow(0 14px 22px #00000085);
+  transition: transform .12s, filter .2s;
+}
+/* Las facetas van en vertical, del vértice a la base, como en los cristales del
+   claro. Partirlas en horizontal convertía la gema en una caja en perspectiva. */
+.gema::before {                    /* la faceta que recibe la luz */
+  content: "";
+  position: absolute; inset: 0;
+  clip-path: polygon(50% 0, 0 30%, 20% 100%, 42% 100%);
+  background: linear-gradient(#ffffffb8, #ffffff33);
+  pointer-events: none;
+}
+.gema::after {                     /* la faceta en sombra */
+  content: "";
+  position: absolute; inset: 0;
+  clip-path: polygon(50% 0, 100% 30%, 86% 100%, 62% 100%);
+  background: linear-gradient(#00000021, #00000059);
+  pointer-events: none;
+}
+.gema > span { position: relative; z-index: 1; }
+.gema:hover  { transform: translateY(-3px); filter: var(--filo) drop-shadow(0 9px 0 #2b1657) drop-shadow(0 18px 26px #00000085) brightness(1.1); }
+.gema:active { transform: translateY(5px);  filter: var(--filo) drop-shadow(0 2px 0 #2b1657) drop-shadow(0 6px 12px #0009); }
+.gema:disabled { cursor: default; transform: none; filter: var(--filo) grayscale(.55) brightness(.6) drop-shadow(0 3px 0 #2b165799); }
+.gema--ataque {
+  background: linear-gradient(158deg, #7fe0ff 0%, #33a5e6 34%, #1a6ec0 66%, #0d3f79 100%);
+  box-shadow: inset 0 0 28px #ffffff3d;
+  --filo:
+    drop-shadow(1.6px 0 0 #d3f2ff) drop-shadow(-1.6px 0 0 #d3f2ff)
+    drop-shadow(0 1.6px 0 #d3f2ff) drop-shadow(0 -1.6px 0 #d3f2ff);
+  filter: var(--filo) drop-shadow(0 7px 0 #0d2f56) drop-shadow(0 14px 22px #00000085);
+}
+.gema--ataque:hover  { filter: var(--filo) drop-shadow(0 9px 0 #0d2f56) drop-shadow(0 18px 26px #00000085) brightness(1.1); }
+.gema--ataque:active { filter: var(--filo) drop-shadow(0 2px 0 #0d2f56) drop-shadow(0 6px 12px #0009); }
+
+/* La pista es una banderola de tela con las puntas recortadas, no un cuadro de
+   diálogo. Con clip-path el borde se recorta, así que el reborde va por
+   box-shadow interior. */
+.mensaje {
+  width: fit-content;
+  max-width: 100%;
+  margin: .9rem auto 0;
+  padding: .55rem 1.5rem;
+  border: 0;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
+  background: #ffffff14;
+  box-shadow: inset 0 0 0 2px #ffffff26, inset 0 2px 0 #ffffff1f;
+  font-size: clamp(.85rem, 2.4vw, 1.05rem);
+  line-height: 1.35;
+  animation: entrar .3s both;
+}
+.mensaje--pista { background: #ffc94a26; box-shadow: inset 0 0 0 2px #ffc94a7a, inset 0 2px 0 #ffe9b845; color: #ffeccb; }
+.mensaje--bien  { background: #6fd36a2e; box-shadow: inset 0 0 0 2px #6fd36a94, inset 0 2px 0 #d8ffd245; color: #e2ffdc; }
+.mensaje--bien b { color: #b6ffab; }
+/* En los retos la pista va ENTRE la pregunta y las gemas: una ayuda colocada
+   debajo de las opciones llega después de la decisión, y ya no ayuda.
+   En la pelea con Quatron no hay pista que dar, así que ahí sigue debajo. */
+.panel--respuesta .mensaje { margin: 0 auto .9rem; }
+.panel--jefe .mensaje      { margin: .9rem auto 0; }
+
+/* ------------------------------------------------------- refuerzo (drag) */
+
+.refuerzo {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: radial-gradient(58% 48% at 50% 46%, #2a1550a3, #0b0518e8 78%);
+  animation: entrar .32s both;
+  transition: background .6s;
+}
+.refuerzo--sale { animation: salir .4s both; }
+
+/* Regla de la casa: se difumina la INTERFAZ, nunca el mundo. Mientras la gema
+   está en el aire, la placa y Nubo se apartan, pero el sitio donde ocurre
+   sigue nítido detrás — que es de lo que iba la escena. */
+.lienzo, .voz { transition: opacity .35s, filter .35s; }
+.escena:has(> .refuerzo) .lienzo,
+.escena:has(> .refuerzo) .voz { opacity: .16; filter: blur(3px); }
+@keyframes salir { to { opacity: 0; transform: scale(1.05) } }
+
+.rayos {
+  position: absolute;
+  width: 150vmax; height: 150vmax;
+  background: repeating-conic-gradient(from 0deg, #ffd97533 0deg 7deg, transparent 7deg 20deg);
+  opacity: 0;
+  animation: girar 22s linear infinite;
+  transition: opacity .6s;
+}
+.refuerzo--completo .rayos { opacity: .5; }
+.refuerzo--completo { background: radial-gradient(66% 56% at 50% 46%, #3f2270a3, #0b051899 82%); }
+@keyframes girar { to { transform: rotate(360deg) } }
+
+.refuerzo-caja { position: relative; display: grid; gap: clamp(12px, 2.6vh, 22px); justify-items: center; }
+
+.refuerzo-guia { margin: 0; display: grid; gap: .2rem; }
+.refuerzo-guia b { font-size: clamp(1.1rem, 3.6vw, 1.7rem); color: #fff3c4; text-shadow: var(--sombra-texto); }
+.refuerzo-guia span { color: #ffe9b8c4; font-size: clamp(.85rem, 2.4vw, 1.05rem); }
+.refuerzo--completo .refuerzo-guia { display: none; }
+
+.ecuacion {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2.6vw, 20px);
+  font-size: clamp(2rem, 8vw, 4rem);
+  font-weight: 900;
+  color: #fff6de;
+  text-shadow: var(--sombra-texto);
+}
+/* El engaste vacío del arco: un aro de oro con el hueco en sombra. Cuando la
+   gema entra, se enciende desde dentro. */
+.hueco {
+  display: grid; place-items: center;
+  min-width: clamp(74px, 19vw, 118px);
+  min-height: clamp(74px, 19vw, 118px);
+  border: 0;
+  clip-path: polygon(50% 0, 100% 30%, 86% 100%, 14% 100%, 0 30%);
+  background: #0e0722cc;
+  color: #ffd87566;
+  box-shadow: inset 0 8px 26px #000000b3;
+  --filo:
+    drop-shadow(2.6px 0 0 #e0a53a) drop-shadow(-2.6px 0 0 #e0a53a)
+    drop-shadow(0 2.6px 0 #e0a53a) drop-shadow(0 -2.6px 0 #e0a53a);
+  filter: var(--filo) drop-shadow(0 0 12px #00000080);
+  transition: .3s;
+}
+.hueco--lleno {
+  background: linear-gradient(158deg, #fffdf0 0%, var(--oro-luz) 30%, var(--oro) 62%, #dfa02a 100%);
+  color: #4a2a08;
+  box-shadow: inset 0 0 26px #ffffff7a;
+  --filo:
+    drop-shadow(2.4px 0 0 #fff3c4) drop-shadow(-2.4px 0 0 #fff3c4)
+    drop-shadow(0 2.4px 0 #fff3c4) drop-shadow(0 -2.4px 0 #fff3c4);
+  filter: var(--filo) drop-shadow(0 0 30px #ffd05fcc);
+  animation: encajar .5s cubic-bezier(.2,1.6,.4,1);
+}
+@keyframes encajar { 0% { transform: scale(.7) rotate(-6deg) } 60% { transform: scale(1.14) } }
+
+.ficha {
+  position: relative;
+  min-width: clamp(74px, 19vw, 118px);
+  min-height: clamp(74px, 19vw, 118px);
+  border: 0;
+  clip-path: polygon(50% 0, 100% 30%, 86% 100%, 14% 100%, 0 30%);
+  background: linear-gradient(158deg, #fffdf0 0%, var(--oro-luz) 28%, var(--oro) 60%, #c98a1e 100%);
+  color: #4a2a08;
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  font-weight: 900;
+  cursor: grab;
+  touch-action: none;
+  box-shadow: inset 0 0 30px #ffffff5e;
+  filter:
+    drop-shadow(2px 0 0 #fffdf0) drop-shadow(-2px 0 0 #fffdf0)
+    drop-shadow(0 2px 0 #fffdf0) drop-shadow(0 -2px 0 #fffdf0)
+    drop-shadow(0 8px 0 var(--oro-hondo)) drop-shadow(0 16px 26px #00000085);
+  animation: ofrecer 1.5s ease-in-out infinite;
+}
+@keyframes ofrecer { 50% { transform: translateY(-9px) scale(1.03) } }
+.ficha--moviendo { cursor: grabbing; animation: none; box-shadow: 0 20px 40px #000a; z-index: 3; }
+
+.refuerzo-final { display: grid; gap: clamp(10px, 2vh, 16px); justify-items: center; }
+.refuerzo-frase { margin: 0; display: grid; gap: .25rem; }
+.refuerzo-frase b { font-size: clamp(1.3rem, 4.6vw, 2.1rem); color: #fff3c4; text-shadow: 0 0 22px #ffc94a99, var(--sombra-texto); }
+.refuerzo-frase span { color: #ffe9b8; font-size: clamp(.9rem, 2.6vw, 1.12rem); }
+
+.cristal-premio {
+  font-size: clamp(3rem, 12vw, 5.5rem);
+  color: #8ee9ff;
+  text-shadow: 0 0 30px #4fd2ff, 0 0 70px #2b8fe0;
+  animation: aparecer-cristal .8s cubic-bezier(.2,1.5,.4,1) both, latir 2.4s .8s ease-in-out infinite;
+}
+@keyframes aparecer-cristal { from { opacity: 0; transform: scale(.2) rotate(-40deg) } }
+
+/* ------------------------------------------------------------ recompensa */
+
+.fogonazo {
+  position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(38% 32% at 50% 46%, #fff3c4bb, #ffb43a55 42%, transparent 72%);
+  animation: destello 2.6s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes destello { 0%, 100% { opacity: .55; transform: scale(.94) } 50% { opacity: 1; transform: scale(1.06) } }
+
+.tesoro {
+  display: grid;
+  gap: .3rem;
+  justify-items: center;
+  padding: clamp(16px, 3.4vw, 26px) clamp(20px, 5vw, 40px);
+  border: 0;
+  border-radius: 22px 22px 10px 10px;
+  background: linear-gradient(#3b2f6e, #221a45 58%, #171034);
+  box-shadow:
+    inset 0 3px 0 #8f7bd6,
+    inset 0 0 0 4px var(--oro),
+    inset 0 -14px 22px -12px #0e0720,
+    0 0 46px #ffc94a4d,
+    0 12px 0 -4px #120c28,
+    0 24px 40px -10px #000000b0;
+  animation: premiar .8s cubic-bezier(.2,1.4,.35,1) both;
+}
+@keyframes premiar { from { opacity: 0; transform: scale(.7) rotate(-8deg) } }
+.tesoro-icono { font-size: clamp(3rem, 12vw, 5rem); filter: drop-shadow(0 0 26px #ffd05f); animation: flotar 3s ease-in-out infinite; }
+.tesoro b { font-size: clamp(1.05rem, 3.2vw, 1.5rem); color: #fff3c4; }
+.tesoro small { color: #ffe9b8b8; font-size: clamp(.8rem, 2.2vw, .96rem); }
+
+.poderes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  gap: 8px;
+  width: min(100%, 620px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Cada poder es una losa del suelo del reino: apagada mientras no se ha ganado,
+   con su filo de oro cuando ya está. Lleva el hecho ENTERO, porque una
+   operación sin resultado no es un poder, es una pregunta pendiente. */
+.poder {
+  display: grid;
+  gap: .18rem;
+  justify-items: center;
+  padding: .5rem .5rem .55rem;
+  border: 0;
+  border-radius: 11px 11px 5px 5px;
+  background: linear-gradient(var(--piedra-cara), var(--piedra-honda));
+  box-shadow: inset 0 2px 0 #ffffff26, inset 0 0 0 2px #1a0f30, 0 4px 0 -2px var(--piedra-base);
+  transition: .3s;
+}
+.poder b {
+  color: #fff4de;
+  font-size: clamp(.86rem, 2.4vw, 1.02rem);
+  white-space: nowrap;
+}
+.poder b em { color: var(--oro); font-style: normal; font-size: 1.22em; }
+
+/* La marca de dominio, con su palabra al lado: así el rótulo se explica solo y
+   no hay ninguna leyenda que memorizar. Los cristalitos son de oro, no cian:
+   en el sistema de materiales el oro es lo conseguido. */
+.poder-marca { display: flex; align-items: center; gap: 4px; }
+.poder-marca i {
+  width: 8px; height: 10px;
+  clip-path: polygon(50% 0, 100% 34%, 74% 100%, 26% 100%, 0 34%);
+  background: #ffffff26;
+}
+.poder-marca i.vivo { background: linear-gradient(168deg, #fff3c4, var(--oro) 52%, var(--oro-hondo)); }
+.poder-marca small {
+  margin-left: .18rem;
+  color: #ffeccbb8;
+  font-size: clamp(.6rem, 1.7vw, .7rem);
+  font-weight: 700;
+}
+
+.poder--cero { opacity: .46; }
+.poder--cero b em { color: #ffeccb6b; }
+.poder--visto {
+  box-shadow: inset 0 2px 0 #ffe6a8, inset 0 0 0 2px var(--oro-hondo), 0 4px 0 -2px #7d4f10;
+}
+.poder--tres {
+  box-shadow: inset 0 2px 0 #fff3c4, inset 0 0 0 2px var(--oro), 0 4px 0 -2px #7d4f10, 0 0 20px #ffc94a4d;
+}
+.poder--tres .poder-marca small { color: #ffe9b8; }
+
+/* -------------------------------------------------------------- minijuego */
+
+.arena {
+  position: relative;
+  --alto: min(46dvh, 340px);
+  width: min(100%, 640px);
+  height: var(--alto);
+  border: 0;
+  border-radius: 22px 22px 12px 12px;
+  background: linear-gradient(#1b0f3480, #0d0620c4);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 3px #b97a1c8c, inset 0 3px 0 #ffd8753d, inset 0 0 50px #000000a6;
+  touch-action: manipulation;
+}
+.arena-aviso { margin: 0; padding-top: 42%; color: #ffe9b8d1; }
+
+/* El cartel de la esquina: placa de piedra con la multiplicación de la ronda.
+   Las estrellas le pasan por detrás. */
+.cartel {
+  position: absolute;
+  top: 10px; left: 10px;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
+  padding: .38rem .75rem .44rem;
+  border-radius: 12px 12px 5px 5px;
+  background: linear-gradient(var(--piedra-cara), var(--piedra-honda));
+  box-shadow:
+    inset 0 2px 0 var(--piedra-luz),
+    inset 0 0 0 2px #1a0f30,
+    inset 0 0 0 4px #b97a1c7a,
+    0 6px 14px -4px #000000a6;
+  color: #fff8e6;
+  font-size: clamp(1.05rem, 3.4vw, 1.5rem);
+  font-weight: 900;
+  animation: entrar .3s both;
+}
+.cartel b { color: var(--oro); font-size: 1.18em; line-height: 1; }
+.cartel--bien b { color: #b6ffab; text-shadow: 0 0 16px #6fd36aa8; }
+
+/* La estrella lleva un número, así que ni gira ni se recorta en punta: se lee.
+   El destello de cuatro puntas queda para el halo, no para la silueta. */
+.estrella {
+  position: absolute;
+  top: -66px;
+  display: grid;
+  place-items: center;
+  width: clamp(46px, 12.5vw, 64px);
+  height: clamp(46px, 12.5vw, 64px);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #fffdf0, var(--oro-luz) 26%, var(--oro) 58%, #d98f1e 100%);
+  color: #5a3208;
+  font-size: clamp(1.05rem, 3.4vw, 1.45rem);
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 3px #fffdf0c4, 0 0 24px #ffd05fcc, 0 0 54px #ffb43a5e;
+  animation: caer 4.1s linear forwards;
+}
+@keyframes caer { to { transform: translateY(calc(var(--alto) + 110px)) } }
+
+/* Sin número: las que sobran cuando la ronda ya está resuelta. */
+.estrella--suelta {
+  width: clamp(36px, 9.5vw, 48px);
+  height: clamp(36px, 9.5vw, 48px);
+  background: radial-gradient(circle at 38% 30%, #ffffff, #ffeeb8 40%, #ffc94a 100%);
+  color: #8a6026;
+}
+.estrella--fallada { animation: fallar .32s ease-out forwards; }
+@keyframes fallar {
+  30% { transform: translateX(-7px) }
+  60% { transform: translateX(6px) }
+  100% { opacity: 0; filter: grayscale(1) }
+}
+.estrella--atrapada { animation: recoger .26s ease-out forwards; }
+@keyframes recoger { to { transform: scale(2.2); opacity: 0 } }
+
+.marcador {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .42rem 1.1rem .48rem;
+  border: 0;
+  border-radius: 12px 12px 5px 5px;
+  background: linear-gradient(var(--piedra-cara), var(--piedra-honda));
+  box-shadow:
+    inset 0 2px 0 var(--piedra-luz),
+    inset 0 0 0 2px #1a0f30,
+    0 6px 0 -3px var(--piedra-base),
+    0 12px 22px -8px #000000a6;
+  font-size: clamp(.9rem, 2.6vw, 1.1rem);
+  font-weight: 800;
+}
+.marcador b { color: var(--oro); font-size: 1.3em; }
+.marcador i { color: #ffffff3d; font-style: normal; }
+
+/* El gancho para volver a jugar: se ve CUÁL es el siguiente premio, no se
+   promete uno en abstracto. */
+.arena-proximo {
+  margin: 0;
+  padding: .3rem .9rem .36rem;
+  border-radius: 10px;
+  background: #ffffff0f;
+  box-shadow: inset 0 0 0 2px #b97a1c7a;
+  color: #ffeccb;
+  font-size: clamp(.8rem, 2.2vw, .95rem);
+  animation: entrar .5s .45s both;
+}
+.arena-proximo b { color: var(--oro); }
+
+/* El premio por no fallar ninguna cabe dentro de la arena, así que va compacto. */
+.tesoro--sorpresa {
+  padding: .5rem 1.1rem .7rem;
+  gap: .1rem;
+  animation: entrar .5s .25s both;
+}
+.tesoro--sorpresa .tesoro-icono { font-size: clamp(2rem, 7vw, 3rem); }
+
+.arena-final { display: grid; gap: .4rem; align-content: center; justify-items: center; height: 100%; padding: .5rem; overflow: auto; animation: entrar .5s both; }
+.arena-marca { margin: 0; font-size: clamp(1rem, 3vw, 1.25rem); }
+.arena-marca b { color: var(--oro); font-size: 1.4em; }
+
+/* ------------------------------------------------------------------ jefe */
+
+.vida-jefe { display: flex; gap: clamp(6px, 1.8vw, 12px); justify-content: center; }
+/* Quatron está hecho de cubos de piedra achaflanados con una gema cian
+   engastada en el centro. Su barra de vida son esos mismos cubos: el modelo
+   ya estaba dibujado, solo había que copiarlo. */
+.bloque {
+  position: relative;
+  width: clamp(36px, 8.4vw, 56px);
+  height: clamp(36px, 8.4vw, 56px);
+  border: 0;
+  clip-path: polygon(24% 0, 76% 0, 100% 24%, 100% 76%, 76% 100%, 24% 100%, 0 76%, 0 24%);
+  background:
+    radial-gradient(circle at 50% 50%, var(--cristal-luz) 0 13%, var(--cristal) 14% 24%, transparent 25%),
+    radial-gradient(circle at 22% 20%, #ffffff5e 0 8%, transparent 9%),
+    radial-gradient(circle at 78% 80%, #0000004d 0 8%, transparent 9%),
+    linear-gradient(152deg, #cbb79a 0%, #a08a6c 42%, #6f5c46 74%, #4a3c2c 100%);
+  box-shadow: inset 0 3px 0 #ffeccb7a, inset 0 -3px 0 #00000066, inset 0 0 0 2px #00000038;
+  filter: drop-shadow(0 5px 0 #372a1d) drop-shadow(0 10px 16px #00000080) drop-shadow(0 0 10px #45c8ff4d);
+  transition: .45s;
+}
+.bloque--roto {
+  opacity: .16;
+  transform: translateY(24px) rotate(26deg) scale(.68);
+  filter: grayscale(1) drop-shadow(0 3px 0 #372a1d);
+}
+
+.panel--jefe { border-color: #57c8ff5e; box-shadow: 0 0 34px #35a8ff33, 0 14px 38px #00000066, inset 0 1px 0 #ffffff26; }
+.panel--aviso { width: min(100%, 520px); font-size: clamp(.9rem, 2.6vw, 1.1rem); }
+.panel--aviso p { margin: 0; }
+.panel--aviso b { color: var(--oro); }
+
+.operacion-jefe {
+  margin: 0 0 .9rem;
+  font-size: clamp(2rem, 8vw, 3.4rem);
+  font-weight: 900;
+  color: #eafaff;
+  text-shadow: 0 0 26px #45c8ff, var(--sombra-texto);
+}
+.operacion-jefe b { color: var(--oro); }
+
+.escena.tiembla { animation: temblar .45s; }
+@keyframes temblar { 0%,100% { transform: none } 20% { transform: translateX(-9px) } 45% { transform: translateX(8px) } 70% { transform: translateX(-4px) } }
+.escena.impacto::after {
+  content: "";
+  position: absolute; inset: 0; z-index: 5;
+  background: #fff;
+  pointer-events: none;
+  animation: golpear .42s ease-out forwards;
+}
+@keyframes golpear { from { opacity: .7 } to { opacity: 0 } }
+
+/* --------------------------------------------------------------- epílogo */
+
+/* Personajes plantados EN la escena, no avatares de la interfaz: van detrás del
+   panel y del globo, apoyados en el mismo suelo, con la luz cálida del farol
+   dándoles en el borde. La altura de Nubo se deriva de la de Lía —es un
+   cachorro, le llega por encima de la rodilla—, así que la pareja no se
+   descompensa por mucho que cambie el tamaño. */
+.figurantes {
+  /* Tres veces el tamaño de antes (215 px de alto llegaban a 645), pero nunca
+     más de dos tercios de la pantalla: sin el tope, en un portátil bajito Lía
+     se queda sin cabeza. */
+  --alto: min(clamp(300px, 64vw, 645px), 66dvh);
+  position: absolute;
+  left: clamp(0px, 1.5vw, 26px);
+  bottom: clamp(100px, 21vh, 190px);
+  z-index: -1;
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(2px, .8vw, 14px);
+  pointer-events: none;
+}
+/* Sin animación de entrada: son decorado, ya están ahí cuando se abre el telón.
+   Una entrada con retardo además arranca en opacity 0, y si la escena se pinta
+   justo en ese instante los personajes no llegan a aparecer nunca. */
+.figurante {
+  filter:
+    drop-shadow(0 16px 12px #000000a6)
+    drop-shadow(0 0 22px #ff9a4a4d);
+  animation: flotar 5.4s ease-in-out infinite;
+}
+.figurante--lia  { height: var(--alto); }
+.figurante--nubo {
+  height: calc(var(--alto) * .42);
+  animation-delay: -1.9s;
+  filter:
+    drop-shadow(0 10px 9px #000000a6)
+    drop-shadow(0 0 18px #6fd0ff7a);
+}
+
+/* En esta escena Nubo está DENTRO del cuadro, así que el retrato del pie de
+   página sobra: el globo se queda con su nombre y con todo el ancho. */
+.escena--epilogo .voz-retrato { display: none; }
+
+/* Con los dos ocupando la izquierda, el texto se va a la derecha. Deja de ser
+   una pantalla centrada y pasa a ser una página ilustrada: personajes a un
+   lado, palabras al otro. Solo donde hay ancho de sobra para partirla. */
+@media (min-width: 760px) {
+  .escena--epilogo .lienzo {
+    align-items: flex-end;
+    padding-right: clamp(20px, 6vw, 90px);
+  }
+  .escena--epilogo .voz { padding-left: clamp(180px, 34vw, 460px); }
+}
+/* En vertical no hay dos columnas que repartir, así que se reparte en alto:
+   el texto arriba, ellos abajo. Centrado, el marcador le caía en la cara. */
+@media (max-width: 759px) {
+  .escena--epilogo .lienzo { justify-content: flex-start; }
+}
+
+.sombra-misterio {
+  position: absolute;
+  top: 22%; left: 50%;
+  width: clamp(150px, 40vw, 300px);
+  height: clamp(150px, 40vw, 300px);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff6a2a4d, transparent 68%);
+  animation: destello 3.4s ease-in-out infinite;
   pointer-events: none;
   z-index: -1;
 }
 
-.titulo {
-  margin: 0 auto .35rem;
-  color: #fff8d5;
-  font-size: clamp(2rem, 6vw, 4rem);
-  line-height: 1;
-  text-shadow: 0 4px 0 var(--morado), 0 7px 16px #12071acc;
+.cierre-datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-
-.subtitulo { width: fit-content; margin: .5rem auto 1.2rem; padding: .35rem .8rem; border-radius: 99px; color: #fff; background: #2d194daa; font-size: clamp(1.05rem, 2.7vw, 1.45rem); text-shadow: 0 2px 4px #000; }
-
-.pergamino {
-  width: min(92%, 690px);
-  margin: 1rem auto;
-  padding: clamp(16px, 3vw, 26px);
-  border: 4px solid #c68842;
-  border-radius: 18px 8px 18px 8px;
-  background: linear-gradient(135deg, #fff4c9, #eacb8f);
-  box-shadow: inset 0 0 22px #bc773e55, 0 8px 0 #8d562e44;
-  font-size: clamp(1rem, 2.5vw, 1.28rem);
-}
-
-.boton, .opcion, .torre {
-  min-width: 118px;
-  min-height: 58px;
-  padding: .8rem 1.35rem;
-  border: 0;
-  border-radius: 18px;
-  color: white;
-  background: linear-gradient(#9563bb, var(--morado));
-  box-shadow: 0 7px 0 var(--morado-oscuro), 0 10px 16px #38264a44;
-  cursor: pointer;
-  font-weight: 800;
-  font-size: clamp(1.1rem, 3vw, 1.45rem);
-  touch-action: manipulation;
-  transition: transform .12s, filter .12s;
-}
-
-.boton:hover, .opcion:hover, .torre:hover { filter: brightness(1.12); transform: translateY(-2px); }
-.boton:active, .opcion:active, .torre:active { transform: translateY(4px); box-shadow: 0 3px 0 var(--morado-oscuro); }
-.boton:focus-visible, .opcion:focus-visible, .torre:focus-visible, .control:focus-visible { outline: 5px solid #fff; outline-offset: 4px; }
-.boton:disabled, .opcion:disabled { cursor: default; filter: saturate(.65); opacity: .72; }
-.boton--oro { color: #52391d; background: linear-gradient(#ffdc70, var(--oro)); box-shadow: 0 7px 0 #ad7229; }
-
-.personajes { display: flex; justify-content: center; align-items: end; gap: clamp(15px, 6vw, 70px); margin: 1.5rem 0; }
-.personaje { display: grid; gap: .2rem; color: white; font-weight: 800; text-shadow: 0 2px 5px #000; }
-.figura { display: block; font-size: clamp(5rem, 15vw, 9rem); filter: drop-shadow(0 9px 3px #38264a35); animation: flotar 2.4s ease-in-out infinite; }
-.personaje:nth-child(2) .figura { animation-delay: -.8s; }
-.personaje--lia { margin-bottom: -8px; }
-.lia { width: clamp(125px, 22vw, 210px); height: clamp(155px, 27vw, 260px); object-fit: contain; filter: drop-shadow(0 12px 7px #38264a55); animation: lia-respira 3.1s ease-in-out infinite; transform-origin: center bottom; }
-.personaje--nubo { margin-bottom: -8px; }
-.nubo { width: clamp(130px, 24vw, 230px); height: clamp(130px, 24vw, 230px); object-fit: contain; filter: drop-shadow(0 12px 7px #38264a55); animation: nubo-vuela 2.5s ease-in-out infinite; }
-.nubo--ayuda { display: block; width: clamp(135px, 28vw, 220px); height: clamp(135px, 28vw, 220px); margin: -1rem auto -2rem; animation: nubo-ayuda 1.1s cubic-bezier(.2,.8,.2,1) both, nubo-vuela 2.5s 1.1s ease-in-out infinite; }
-
-.pergamino--mapa { position: relative; z-index: 2; width: min(82%, 510px); margin-top: .4rem; }
-.mapa-ruta { position: relative; width: min(92%, 700px); height: clamp(260px, 42vh, 390px); margin: -2.3rem auto -1rem; }
-.mapa-ruta::after { content: ""; position: absolute; left: 22%; bottom: 4%; width: 54%; height: 55%; border: 8px dotted #ffe577; border-left-color: transparent; border-bottom-color: transparent; border-radius: 50%; transform: rotate(-18deg); filter: drop-shadow(0 2px 2px #542d29); }
-.ruta-punto { position: absolute; z-index: 2; width: 18px; height: 18px; border: 3px solid white; border-radius: 50%; background: #f7bd48; box-shadow: 0 0 18px #fff; }
-.ruta-punto--1 { left: 24%; bottom: 15%; }
-.ruta-punto--2 { left: 48%; bottom: 30%; }
-.ruta-punto--3 { left: 68%; bottom: 52%; }
-.torre { min-height: 125px; min-width: 0; font-size: clamp(2.5rem, 7vw, 4rem); background: #c99b78; box-shadow: 0 7px 0 #76513d; }
-.torre--activa { position: absolute; right: 10%; top: 18%; z-index: 3; display: grid; place-items: center; min-width: 150px; min-height: 145px; border: 5px solid #ffd45e; border-radius: 50%; background: radial-gradient(circle, #fffbc7, #6f43a8cc 58%, #2d174ddd); box-shadow: 0 0 12px #fff, 0 0 34px #fce562, 0 8px 0 #432665; animation: torre-activa 1.7s ease-in-out infinite; }
-.torre--activa small { display: block; color: white; font-size: .9rem; text-shadow: 0 2px 3px #000; }
-.portal { line-height: .7; color: #fff7a2; text-shadow: 0 0 20px white; }
-.cristales { display: flex; position: relative; z-index: 2; justify-content: center; gap: 16px; color: #83f4ff; font-size: clamp(2rem, 5vw, 3rem); text-shadow: 0 0 10px #42cfff, 0 0 24px #fff; }
-.placa-mundo { position: relative; z-index: 3; width: fit-content; margin: 0 auto; padding: .55rem 1.4rem; border: 4px solid #a56935; border-radius: 10px; background: #f2d391; box-shadow: 0 5px 0 #684022; font-size: 1.35rem; font-weight: 900; }
-.placa-mundo small { display: block; }
-
-.grupos { display: flex; justify-content: center; flex-wrap: wrap; gap: clamp(20px, 6vw, 60px); margin: clamp(20px, 5vh, 45px) auto; }
-.grupos--cuatro { gap: clamp(8px, 2vw, 18px); }
-.grupos--cuatro .grupo { grid-template-columns: repeat(2, 1fr); padding: clamp(9px, 1.5vw, 15px); }
-.grupos--cuatro .elemento { font-size: clamp(2rem, 5vw, 3.5rem); }
-.grupo { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 15px; border: 5px solid #d89b47; border-radius: 45% 45% 20px 20px; background: linear-gradient(#356b38dd, #174a2edd); box-shadow: inset 0 0 18px #9ef56a66, 0 8px 16px #17112677; }
-.elemento { font-size: clamp(2.4rem, 7vw, 4.1rem); filter: drop-shadow(0 4px 1px #5f3b6944); }
-.opciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; margin: 1.5rem 0; }
-.opcion { min-width: 105px; font-size: clamp(1.5rem, 5vw, 2.1rem); }
-
-.mensaje { min-height: 2.8em; margin: 1rem auto; font-weight: 800; font-size: clamp(1.1rem, 3vw, 1.45rem); }
-.mensaje { width: fit-content; max-width: 92%; padding: .6rem 1rem; border-radius: 18px; background: #fff0bded; box-shadow: 0 5px 0 #8d562e88; }
-.mensaje--bien { color: #285d2b; }
-.brilla .elemento { animation: brillar .7s ease-in-out alternate infinite; }
-
-.puerta {
-  width: min(62vw, 310px);
-  margin: 1rem auto;
-  padding: 38px 15px 28px;
-  border: 13px solid #44354d;
-  border-radius: 150px 150px 10px 10px;
-  background: repeating-linear-gradient(0deg, #594c61 0 40px, #34283c 42px 46px);
-  box-shadow: inset 0 0 35px #160d20aa, 0 10px 0 #241a2b, 0 0 40px #c33eff77;
-  transform-origin: left bottom;
-  transition: transform .8s cubic-bezier(.2,.8,.2,1), filter .5s;
-}
-.cristal-puerta { display: block; margin: -27px auto 5px; color: #ee8cff; font-size: 3.5rem; line-height: 1; text-shadow: 0 0 8px #fff, 0 0 25px #db32ff; animation: cristal-pulso 1.3s ease-in-out infinite; }
-.puerta--abierta { transform: perspective(600px) rotateY(62deg) translateY(-8px); filter: drop-shadow(0 0 25px #ffe782); }
-.operacion { padding: .5rem; border-radius: 12px; background: #fff0bd; font-size: clamp(2rem, 7vw, 3.8rem); font-weight: 900; }
-
-.ayuda { background-image: linear-gradient(#21163877, #331d4e99), url("../assets/reino-cuadrado/castillo-panoramico.png"); background-position: center; }
-.nubo-ayuda { font-size: clamp(4.5rem, 12vw, 7rem); }
-.filas { display: grid; gap: 8px; width: fit-content; margin: 1rem auto; padding: 16px 26px; border: 4px solid #c58c43; border-radius: 18px; background: #fff7d6e8; }
-.fila { display: flex; gap: .45rem; }
-.fila i { color: #3bd5ff; font-style: normal; font-size: clamp(1.8rem, 6vw, 3rem); text-shadow: 0 0 7px #fff, 0 0 15px #167eff; animation: cristal-aparece .5s both; }
-.fila:nth-child(2) i { animation-delay: .35s; }
-.fila:nth-child(3) i { animation-delay: .7s; }
-.explicacion { display: grid; gap: .35rem; margin: 1rem; font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 900; }
-
-.barra { position: relative; z-index: 3; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 1rem; }
-.insignia { padding: .5rem .8rem; border-radius: 99px; background: #fff3cecc; font-weight: 800; }
-.controles { display: flex; gap: 7px; }
-.reiniciar, .sonido { border: 0; background: #fff8; border-radius: 99px; min-height: 40px; padding: .5rem .8rem; color: var(--tinta); cursor: pointer; }
-.sonido { min-width: 43px; font-size: 1.1rem; }
-
-/* Progresión pedagógica v2 */
-.progreso-cristales { position: relative; z-index: 4; display: flex; justify-content: center; gap: .55rem; min-height: 32px; margin: -.7rem auto .65rem; color: #b9d9df; font-size: 1.8rem; text-shadow: 0 2px 5px #14223c; }
-.progreso-cristales .conseguido { color: #79f3ff; text-shadow: 0 0 7px white, 0 0 18px #42cfff; animation: cristal-pulso 1.7s ease-in-out infinite; }
-.titulo--reto { font-size: clamp(1.8rem, 5vw, 3.3rem); }
-.operacion-guia { display: flex; justify-content: center; align-items: center; gap: .75rem; width: fit-content; margin: .45rem auto; padding: .45rem .8rem; border: 3px solid #ffe078; border-radius: 16px; color: white; background: #3b225fcc; box-shadow: 0 0 18px #7d48a9; }
-.operacion-guia strong { font-size: clamp(1rem, 2.8vw, 1.3rem); }
-.operacion-guia span { padding: .2rem .55rem; border-radius: 10px; color: #4a2d15; background: #ffe478; font-size: clamp(1.3rem, 4vw, 1.8rem); font-weight: 900; }
-.grupos--aprendizaje { gap: clamp(7px, 1.3vw, 14px); max-width: 860px; margin: clamp(12px, 2.5vh, 24px) auto; }
-.grupos--aprendizaje .grupo { position: relative; display: grid; grid-template-columns: 1fr; min-width: 68px; padding: 14px 10px 10px; border-radius: 18px; }
-.numero-grupo { position: absolute; top: -12px; left: 50%; display: grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; color: #51316f; background: #fff3ce; font-weight: 900; transform: translateX(-50%); }
-.elementos { max-width: 105px; font-size: clamp(1.35rem, 3.3vw, 2.2rem); letter-spacing: .02em; line-height: 1.2; overflow-wrap: anywhere; }
-.nivel-ayuda-1 .grupo, .nivel-ayuda-2 .grupo { animation: grupo-guia .55s calc(var(--orden) * .28s) ease-in-out both; }
-.conteo-guiado { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .35rem; width: fit-content; max-width: 94%; margin: -.25rem auto .65rem; padding: .45rem .7rem; border-radius: 14px; color: #392158; background: #fff4cfe8; font-size: clamp(1rem, 3vw, 1.35rem); font-weight: 900; }
-.conteo-guiado span { min-width: 2rem; padding: .2rem .4rem; border-radius: 9px; background: #ffe177; }
-.conteo-guiado i { font-style: normal; }
-.suma-repetida { width: fit-content; max-width: 95%; margin: .45rem auto; padding: .4rem .7rem; border: 3px solid #ffd56a; border-radius: 13px; color: #fff; background: #3c235fdd; font-size: clamp(1rem, 3.2vw, 1.5rem); font-weight: 900; }
-.boton--pista { min-height: 48px; margin-top: -.35rem; padding: .55rem 1rem; font-size: 1rem; background: linear-gradient(#558ab7, #386486); box-shadow: 0 5px 0 #27465e; }
-.boton--secundario { margin: .4rem; color: #3b2850; background: #f5e7c9; box-shadow: 0 6px 0 #9b7d61; }
-.continuar-reto { margin-top: .35rem; }
-.final-cristales { color: #7bf8ff; font-size: clamp(3rem, 8vw, 5.5rem); letter-spacing: .25em; text-shadow: 0 0 8px white, 0 0 28px #4adfff; }
-.nubo--final { display: block; width: clamp(100px, 18vw, 155px); height: auto; margin: -1.2rem auto -2rem; }
-.resumen { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 1rem auto; }
-.resumen div { min-width: 145px; padding: .65rem; border: 3px solid #ffd56a; border-radius: 15px; background: #fff4cfe8; }
-.resumen dt { font-weight: 800; }
-.resumen dd { margin: .15rem 0 0; color: #663c88; font-size: 1.8rem; font-weight: 900; }
-.dialogo-capa { position: absolute; inset: 0; z-index: 60; display: grid; place-items: center; padding: 1rem; background: #160d20cc; }
-.dialogo { width: min(92%, 520px); padding: clamp(20px, 5vw, 38px); border: 5px solid #ffd56a; border-radius: 22px; background: #fff3ce; box-shadow: 0 15px 45px #0008; }
-.dialogo h2 { margin-top: 0; }
-@keyframes grupo-guia { 0% { transform: scale(.94); } 55% { border-color: #fff; box-shadow: 0 0 24px #ffe96c; } 100% { transform: scale(1); } }
-
-.particulas { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: -1; }
-.particulas i { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #fff6a5; box-shadow: 0 0 12px #fff36a; animation: particula 7s linear infinite; opacity: 0; }
-.particulas i:nth-child(1) { left: 12%; animation-delay: -1s; }
-.particulas i:nth-child(2) { left: 34%; animation-delay: -5s; animation-duration: 9s; }
-.particulas i:nth-child(3) { left: 57%; animation-delay: -3s; }
-.particulas i:nth-child(4) { left: 76%; animation-delay: -7s; animation-duration: 10s; }
-.particulas i:nth-child(5) { left: 91%; animation-delay: -4s; animation-duration: 8s; }
-
-@keyframes flotar { 50% { transform: translateY(-9px) rotate(2deg); } }
-@keyframes brillar { to { transform: scale(1.15); filter: drop-shadow(0 0 12px #fff) drop-shadow(0 0 18px #ffd44d); } }
-@keyframes entrar-escena { from { opacity: 0; transform: scale(.96) translateY(14px); } }
-@keyframes nubo-vuela { 50% { transform: translateY(-12px) rotate(2deg) scale(1.02); } }
-@keyframes lia-respira { 50% { transform: translateY(-5px) rotate(-1deg) scale(1.015); } }
-@keyframes nubo-ayuda { from { opacity: 0; transform: translateY(35px) scale(.65) rotate(-8deg); } 70% { transform: translateY(-8px) scale(1.05) rotate(2deg); } }
-@keyframes torre-activa { 50% { transform: translateY(-6px); filter: brightness(1.14) drop-shadow(0 0 13px #fff4a2); } }
-@keyframes particula { 0% { transform: translateY(760px) scale(.4); opacity: 0; } 15%, 75% { opacity: .75; } 100% { transform: translateY(-30px) scale(1.2); opacity: 0; } }
-@keyframes cristal-pulso { 50% { transform: scale(1.12); filter: brightness(1.35); } }
-@keyframes cristal-aparece { from { opacity: 0; transform: scale(.2) rotate(-30deg); } to { opacity: 1; transform: scale(1); } }
-
-.escena--inicio { background-position: center 40%; }
-.escena--inicio::after, .escena--jardin::after, .escena--puerta::after { content: ""; position: absolute; inset: 45% 0 0; z-index: -1; background: linear-gradient(transparent, #190f26aa); pointer-events: none; }
-.escena--mapa { background-position: center; }
-.escena--jardin { background-position: 35% center; }
-.escena--puerta { background-position: 62% center; }
-.escena--pajaritos { background-position: center 35%; }
-
-.continuar-puerta { margin-top: .4rem; animation: entrar-escena .45s both; }
-.pergamino--reto { margin-top: .4rem; }
-.torres-pajaros { display: flex; justify-content: center; align-items: end; gap: clamp(6px, 2vw, 22px); margin: 1rem auto; }
-.torre-pajaros { display: grid; justify-items: center; filter: drop-shadow(0 7px 5px #17112699); }
-.torre-pajaros span { display: block; padding: .15rem .3rem; border-radius: 10px; background: #fff4c9dd; font-size: clamp(.75rem, 2.2vw, 1.25rem); letter-spacing: -.15em; }
-.torre-pajaros b { display: block; margin-top: -.15rem; font-size: clamp(3rem, 8vw, 5.2rem); }
-.torres-pajaros--felices .torre-pajaros { animation: torre-celebra .65s ease-in-out alternate 3; }
-.torres-pajaros--felices .torre-pajaros:nth-child(2) { animation-delay: .12s; }
-.torres-pajaros--felices .torre-pajaros:nth-child(3) { animation-delay: .24s; }
-.torres-pajaros--felices .torre-pajaros:nth-child(4) { animation-delay: .36s; }
-.fin-capitulo { width: fit-content; max-width: 92%; margin: 1rem auto 0; padding: .8rem 1.2rem; border: 3px solid #7ad9ff; border-radius: 16px; color: white; background: #36205cdd; box-shadow: 0 0 22px #4bdcff88; font-size: 1.1rem; animation: entrar-escena .5s both; }
-@keyframes torre-celebra { to { transform: translateY(-12px) rotate(3deg); filter: drop-shadow(0 0 12px #fff472); } }
-
-/* Momento de logro: la operación se convierte en un poder dentro del mundo. */
-.celebracion-operacion {
-  position: absolute;
-  inset: 0;
-  z-index: 30;
+.cierre-datos li {
   display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: .55rem;
-  padding: 1.5rem;
-  overflow: hidden;
+  min-width: 96px;
+  padding: .6rem 1rem;
+  border: 0;
+  border-radius: 14px 14px 6px 6px;
+  background: linear-gradient(var(--piedra-cara), var(--piedra-honda));
+  box-shadow:
+    inset 0 2px 0 var(--piedra-luz),
+    inset 0 0 0 2px #1a0f30,
+    0 6px 0 -3px var(--piedra-base),
+    0 12px 22px -8px #000000a6;
+}
+.cierre-datos b { color: var(--acento); font-size: clamp(1.4rem, 4.4vw, 2rem); line-height: 1; }
+.cierre-datos small { color: #ffeec7ad; font-size: clamp(.66rem, 1.9vw, .8rem); }
+
+/* --------------------------------------------------------------- cortina */
+
+.cortina {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: radial-gradient(circle at 50% 50%, #fff3c4, #7a4bd0 55%, #150c26);
+  clip-path: circle(0% at 50% 50%);
+  animation: cerrar-iris .28s ease-in forwards;
   pointer-events: none;
-  background: radial-gradient(circle at center, #7137bccc 0, #26103bb8 38%, #100919e8 100%);
-  animation: logro-entra .42s cubic-bezier(.16,.9,.25,1.3) both;
 }
+@keyframes cerrar-iris { to { clip-path: circle(150% at 50% 50%) } }
+.cortina--abre { animation: abrir-iris .5s ease-out forwards; }
+@keyframes abrir-iris { from { clip-path: circle(150% at 50% 50%) } to { clip-path: circle(0% at 50% 50%) } }
 
-.celebracion-operacion--sale { animation: logro-sale .5s ease-in both; }
+/* ----------------------------------------------------------------- modal */
 
-.rayos-logro {
-  position: absolute;
-  width: min(78vw, 620px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  opacity: .68;
-  background: repeating-conic-gradient(from 0deg, #fff7a9 0 7deg, transparent 7deg 17deg);
-  -webkit-mask-image: radial-gradient(circle, transparent 0 17%, #000 31% 61%, transparent 76%);
-  mask-image: radial-gradient(circle, transparent 0 17%, #000 31% 61%, transparent 76%);
-  animation: rayos-giran 7s linear infinite, rayos-respiran 1s ease-in-out infinite alternate;
-}
-
-.ecuacion-impacto {
-  position: relative;
-  z-index: 3;
-  padding: .45rem clamp(1rem, 4vw, 2rem);
-  border: clamp(3px, .6vw, 6px) solid #fff1a0;
-  border-radius: 22px;
-  color: white;
-  background: linear-gradient(180deg, #a455e8, #5a238c);
-  box-shadow: 0 7px 0 #351451, 0 0 16px white, 0 0 42px #f17dff;
-  font-family: "Trebuchet MS", Georgia, sans-serif;
-  font-size: clamp(2.2rem, 8vw, 5rem);
-  font-weight: 1000;
-  letter-spacing: .02em;
-  line-height: 1.05;
-  text-shadow: 0 4px 0 #361353, 0 0 12px #fff;
-  animation: ecuacion-golpea .75s cubic-bezier(.15,.9,.25,1.25) both;
-}
-
-.texto-logro {
-  position: relative;
-  z-index: 3;
-  padding: .45rem 1rem;
-  border-radius: 99px;
-  color: #4a2618;
-  background: linear-gradient(#fff9ce, #f7c951);
-  box-shadow: 0 5px 0 #a66c26, 0 0 18px #fff3a8;
-  font-size: clamp(1.1rem, 3.4vw, 1.65rem);
-  font-weight: 900;
-  animation: texto-logro-entra .45s .4s both;
-}
-
-.cristal-magico {
-  position: relative;
-  z-index: 4;
-  width: clamp(110px, 22vw, 180px);
-  height: clamp(120px, 24vw, 195px);
-  margin-bottom: -.2rem;
-  animation: cristal-llega 1.05s cubic-bezier(.17,.84,.27,1.35) both, cristal-flota 1.15s 1.05s ease-in-out infinite alternate;
-}
-
-.cristal-magico .gema {
+.modal {
   position: absolute;
   inset: 0;
+  z-index: 70;
   display: grid;
   place-items: center;
-  color: #7bf8ff;
-  font-size: clamp(7rem, 21vw, 12rem);
-  line-height: 1;
-  transform: scaleX(.68);
-  text-shadow: 0 0 4px white, 0 0 14px #70f5ff, 0 0 32px #41a9ff, 0 0 60px #bd62ff;
-  filter: drop-shadow(0 10px 5px #140d3f88);
+  padding: 1rem;
+  background: #0b0518d6;
+  backdrop-filter: blur(5px);
+  animation: entrar .25s both;
+}
+.modal-caja {
+  width: min(94%, 480px);
+  padding: clamp(20px, 5vw, 34px);
+  border: 3px solid var(--oro);
+  border-radius: 24px;
+  background: linear-gradient(160deg, #33205a, #1c1036);
+  box-shadow: 0 24px 60px #000000a6, inset 0 1px 0 #ffffff2b;
+}
+.modal-caja h2 { margin: 0 0 .5rem; font-size: clamp(1.2rem, 4vw, 1.7rem); color: #fff3c4; }
+.modal-caja p { margin: 0 0 1.2rem; color: #ffe9b8c4; font-size: clamp(.88rem, 2.5vw, 1.05rem); }
+.modal-acciones { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+/* --------------------------------------------------------- adaptaciones */
+
+@media (max-width: 430px) {
+  .voz { grid-template-columns: auto minmax(0, 1fr); }
+  .voz-globo { border-radius: 16px 16px 16px 4px; }
+  .grupo { border-radius: 40% 40% 14px 14px; }
 }
 
-.cristal-magico::before {
-  content: "";
-  position: absolute;
-  inset: 13% 27%;
-  z-index: 2;
-  transform: rotate(-10deg);
-  border-radius: 50%;
-  background: linear-gradient(115deg, transparent 12%, #fff 36%, transparent 51%);
-  opacity: .85;
+/* Pantallas bajas (teléfono apaisado, tabletas pequeñas): que el reto completo
+   siga cabiendo sin scroll, que es donde se pierde la atención. */
+@media (max-height: 730px) {
+  .lienzo { gap: 8px; padding-top: 4px; padding-bottom: 4px; }
+  .panel { padding: 10px 14px 12px; border-radius: 18px; }
+  .etapa { margin-bottom: .4rem; }
+  .pieza { font-size: clamp(.95rem, 2.8vw, 1.25rem); }
+  .grupo { padding: 7px 9px; }
+  .titulo--reto { font-size: clamp(1.15rem, 3.6vw, 1.6rem); }
+  .pregunta { margin-bottom: .55rem; }
+  .mensaje { margin-top: .55rem; padding: .4rem .8rem; }
+  .voz-retrato { width: clamp(44px, 10vw, 62px); }
+  .voz { padding-top: 6px; padding-bottom: 8px; gap: 8px; }
+  .voz-globo { padding: 8px 12px; border-radius: 14px 14px 14px 4px; }
+  .arena { --alto: min(38dvh, 250px); }
 }
 
-.cristal-magico i {
-  position: absolute;
-  left: 50%;
-  top: 48%;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: white;
-  box-shadow: 0 0 9px #fff, 0 0 16px #56e9ff;
-  animation: chispa-cristal 1.1s ease-out infinite;
-}
-.cristal-magico i:nth-of-type(1) { --x: -92px; --y: -48px; animation-delay: -.15s; }
-.cristal-magico i:nth-of-type(2) { --x: 88px; --y: -55px; animation-delay: -.55s; }
-.cristal-magico i:nth-of-type(3) { --x: -78px; --y: 54px; animation-delay: -.8s; }
-.cristal-magico i:nth-of-type(4) { --x: 85px; --y: 48px; animation-delay: -.35s; }
-.cristal-magico i:nth-of-type(5) { --x: 0px; --y: -98px; animation-delay: -.68s; }
-.cristal-magico i:nth-of-type(6) { --x: 8px; --y: 91px; animation-delay: -.95s; }
-
-.celebracion-operacion--cristal .ecuacion-impacto { font-size: clamp(2rem, 6.4vw, 4rem); }
-
-@keyframes logro-entra { from { opacity: 0; transform: scale(1.15); } }
-@keyframes logro-sale { to { opacity: 0; transform: scale(1.08); } }
-@keyframes rayos-giran { to { transform: rotate(1turn); } }
-@keyframes rayos-respiran { to { opacity: .95; scale: 1.08; } }
-@keyframes ecuacion-golpea {
-  0% { opacity: 0; transform: scale(3) rotate(-5deg); filter: blur(8px); }
-  55% { opacity: 1; transform: scale(.88) rotate(2deg); filter: blur(0); }
-  72% { transform: scale(1.08) rotate(-1deg); }
-  100% { transform: scale(1); }
-}
-@keyframes texto-logro-entra { from { opacity: 0; transform: translateY(25px) scale(.8); } }
-@keyframes cristal-llega {
-  0% { opacity: 0; transform: translateY(55vh) scale(.15) rotate(-210deg); }
-  62% { opacity: 1; transform: translateY(-22px) scale(1.18) rotate(12deg); }
-  80% { transform: translateY(7px) scale(.94) rotate(-5deg); }
-  100% { transform: translateY(0) scale(1) rotate(0); }
-}
-@keyframes cristal-flota { to { transform: translateY(-12px) rotate(3deg) scale(1.04); } }
-@keyframes chispa-cristal {
-  0% { opacity: 1; transform: translate(-50%, -50%) scale(.3); }
-  80%, 100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1.7); }
+@media (min-width: 900px) {
+  .lienzo { gap: clamp(14px, 2.4vh, 26px); }
+  .voz { max-width: 1100px; margin: 0 auto; }
 }
 
-@media (max-width: 560px) {
-  .juego { padding: 0; }
-  .escena { min-height: 100dvh; border-width: 0; border-radius: 0; padding: 18px 14px 28px; }
-  .personajes { margin: .7rem 0; }
-  .nubo { width: 135px; height: 135px; }
-  .lia { width: 125px; height: 165px; }
-  .reiniciar { font-size: 0; padding: .5rem; min-width: 40px; }
-  .reiniciar::first-letter { font-size: 1rem; }
-  .mapa { gap: 14px; }
-  .mapa-ruta { height: 300px; margin-top: -1rem; }
-  .torre--activa { right: 2%; min-width: 125px; min-height: 125px; }
-  .torre { min-height: 105px; }
-  .grupos { gap: 15px; margin: 18px auto; }
-  .grupos--aprendizaje { gap: 9px; }
-  .grupos--aprendizaje .grupo { min-width: 58px; padding: 13px 7px 7px; border-width: 3px; }
-  .elementos { max-width: 82px; }
-  .pergamino--reto { padding: 12px; }
-  .operacion-guia { margin: .25rem auto; }
-  .barra .insignia { font-size: .82rem; }
-  .reiniciar span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-}
-
+/* Menos movimiento para quien lo prefiera (y para tabletas lentas). */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
-}
-
-/* Interfaz pedagógica: secuencia observar → responder → reforzar. */
-.pergamino span { display: block; margin-top: .35rem; }
-.pergamino--inicio { display: grid; gap: .25rem; line-height: 1.45; }
-.pergamino--inicio strong { color: var(--morado-oscuro); font-size: 1.18em; }
-.pergamino--mapa { padding-block: 15px; }
-.placa-mundo { font-size: 1.15rem; }
-.titulo--reto { font-size: clamp(1.8rem, 5vw, 3.3rem); }
-.paso { display: flex; justify-content: center; align-items: center; gap: .55rem; width: fit-content; margin: .7rem auto .35rem; color: white; font-size: clamp(.95rem, 2.4vw, 1.15rem); font-weight: 900; text-shadow: 0 2px 4px #000; }
-.paso span { padding: .25rem .55rem; border-radius: 99px; color: #45275e; background: #ffe177; font-size: .78em; letter-spacing: .04em; text-shadow: none; }
-.grupos--aprendizaje { margin: clamp(14px, 2.5vh, 25px) auto 12px; }
-.mensaje { min-height: 2.8em; margin: .65rem auto; font-size: clamp(1rem, 2.6vw, 1.25rem); }
-.zona-respuesta { width: min(96%, 720px); margin: .7rem auto 0; padding: .25rem clamp(.55rem, 2vw, 1rem) .8rem; border: 3px solid #ffe078; border-radius: 22px; background: #241440c9; box-shadow: 0 9px 22px #12081f66; }
-.zona-respuesta .paso { margin-top: -.85rem; padding-inline: .7rem; background: #3a205dcc; border-radius: 99px; }
-.pregunta { display: grid; grid-template-columns: auto 1fr; align-items: center; justify-content: center; column-gap: .55rem; width: fit-content; margin: .35rem auto .2rem; color: #fff9d5; font-size: clamp(1.2rem, 3.4vw, 1.65rem); line-height: 1.2; }
-.pregunta > span { grid-row: 1 / 3; font-size: 1.45em; }
-.pregunta small { display: block; margin-top: .25rem; color: #ffe177; font-size: .65em; font-weight: 800; }
-.zona-respuesta .opciones { margin: .85rem 0 .35rem; }
-.zona-ayuda { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem 1rem; }
-.zona-ayuda .mensaje { margin-inline: 0; }
-.zona-ayuda .boton--pista { margin: 0; }
-
-.celebracion-operacion { pointer-events: auto; }
-.instruccion-refuerzo { position: relative; z-index: 3; display: grid; gap: .25rem; max-width: 580px; padding: .65rem 1.2rem; border-radius: 18px; color: #392158; background: #fff4cfee; box-shadow: 0 5px 0 #b87c35; font-size: clamp(1rem, 3vw, 1.4rem); }
-.instruccion-refuerzo strong { font-size: 1.15em; }
-.ecuacion-impacto.ecuacion-arrastre { display: flex; align-items: center; gap: .35em; padding: .55rem .75rem .65rem 1.25rem; }
-.cajon-resultado { display: grid; place-items: center; width: 1.35em; height: 1.2em; border: .09em dashed #ffe978; border-radius: .2em; color: #ffe978; background: #2b1248cc; box-shadow: inset 0 0 14px #160724, 0 0 12px #fff5a4; }
-.cajon-resultado--lleno { border-style: solid; color: #3b2157; background: #ffe978; animation: cajon-acierto .7s cubic-bezier(.2,.9,.25,1.3) both; }
-.numero-arrastrable { position: relative; z-index: 8; display: grid; place-items: center; width: clamp(88px, 18vw, 132px); height: clamp(82px, 16vw, 118px); border: 5px solid #fff4a7; border-radius: 28px; color: #43205f; background: linear-gradient(#fff7ac, #f7bd48); box-shadow: 0 9px 0 #a76626, 0 0 22px #fff; font: 1000 clamp(2.8rem, 9vw, 5.3rem)/1 "Trebuchet MS", sans-serif; cursor: grab; touch-action: none; user-select: none; animation: numero-salta 1s ease-in-out infinite; }
-.numero-arrastrable::after { content: "ARRÁSTRAME"; position: absolute; bottom: 7px; font-size: clamp(.48rem, 1.5vw, .68rem); letter-spacing: .06em; }
-.numero-arrastrable--moviendo { cursor: grabbing; animation: none; filter: brightness(1.08); }
-.confirmacion-refuerzo { position: relative; z-index: 4; display: grid; justify-items: center; gap: .35rem; min-height: 1.2rem; color: white; font-size: clamp(1rem, 3vw, 1.4rem); text-shadow: 0 2px 4px #000; }
-.confirmacion-refuerzo strong { padding: .35rem .8rem; border-radius: 12px; color: #3c2259; background: #fff4cfee; font-size: 1.25em; text-shadow: none; }
-.cristal-mini { color: #7bf8ff; font-size: 3.2rem; line-height: .9; text-shadow: 0 0 8px white, 0 0 22px #42cfff; animation: cristal-pulso 1.2s ease-in-out infinite; }
-.cerrar-refuerzo { min-height: 50px; margin-top: .25rem; padding-block: .55rem; font-size: 1.05rem; }
-.celebracion-operacion--completa .instruccion-refuerzo, .celebracion-operacion--completa .numero-arrastrable { display: none; }
-@keyframes numero-salta { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-14px) rotate(2deg); } }
-@keyframes cajon-acierto { 0% { transform: scale(.55); } 55% { transform: scale(1.2) rotate(4deg); } 100% { transform: scale(1); } }
-
-@media (max-width: 560px) {
-  .paso { margin-top: .5rem; }
-  .zona-respuesta { width: 100%; margin-top: .75rem; padding-inline: .4rem; }
-  .pregunta { text-align: left; }
-  .zona-respuesta .opciones { gap: 10px; }
-  .zona-respuesta .opcion { min-width: 86px; min-height: 55px; }
-  .zona-ayuda { display: grid; justify-items: center; }
-  .zona-ayuda .mensaje { margin-inline: auto; }
-  .celebracion-operacion { padding: 1rem; gap: .75rem; }
-  .ecuacion-impacto.ecuacion-arrastre { font-size: clamp(2.15rem, 11vw, 3.2rem); }
-  .instruccion-refuerzo { width: min(94vw, 430px); }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .telon { animation: none; translate: none; }
+  .follaje { translate: none; }
 }

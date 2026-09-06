@@ -38,7 +38,14 @@
       tono(1047, .45, .5, "sine", .11);
     },
     ayuda: function () { tono(392, 0, .18, "sine"); tono(494, .15, .2, "sine"); },
-    puerta: function () { tono(130, 0, .5, "sawtooth", .06); tono(196, .25, .55, "triangle", .08); tono(784, .55, .4, "sine", .09); }
+    puerta: function () { tono(130, 0, .5, "sawtooth", .06); tono(196, .25, .55, "triangle", .08); tono(784, .55, .4, "sine", .09); },
+    golpe: function () { tono(90, 0, .18, "square", .07); tono(150, .04, .22, "sawtooth", .05); tono(660, .12, .2, "triangle", .07); },
+    cristal: function () {
+      tono(880, 0, .18, "sine", .07);
+      tono(1175, .09, .2, "sine", .08);
+      tono(1568, .2, .3, "sine", .09);
+      tono(2093, .34, .55, "sine", .07);
+    }
   };
 
   try { activo = localStorage.getItem("aventurasDeLia.sonido") !== "apagado"; } catch (error) { activo = true; }

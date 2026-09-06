@@ -1,0 +1,135 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<base href="../">
+<title>Recorrido automático — Las Aventuras de Lía</title>
+<script>["v1","v2","v3","v4"].forEach(function (v) { localStorage.removeItem("aventurasDeLia." + v); });</script>
+<link rel="stylesheet" href="css/game.css"></head>
+<body><main id="juego" class="juego"></main>
+<pre id="log" style="position:fixed;inset:0;z-index:999;background:#000;color:#0f0;font:12px monospace;padding:8px;overflow:auto"></pre>
+<script defer src="js/contenido.js"></script>
+<script defer src="js/progreso.js"></script>
+<script defer src="js/sonidos.js"></script>
+<script defer src="js/escenas.js"></script>
+<script defer src="js/game.js"></script>
+<script>
+var lineas = [], errores = [], fallar = location.search.indexOf('falla') >= 0, fallados = {};
+var repetir = location.search.indexOf('repetir') >= 0;
+var parar = new URLSearchParams(location.search).get('parar');
+window.onerror = function (m, f, l) { errores.push("ERROR " + m + " @" + (f||"").split("/").pop() + ":" + l); };
+function anota(t) { lineas.push(t); }
+window.addEventListener("load", function () {
+  var vueltas = 0, ultima = "", vistas = [], sinCambio = 0, espera = 0;
+  var ronda = 0, anotadoFinal = false, repeticiones = 0;
+  var timer = setInterval(function () {
+    if (++vueltas > 2600) return terminar("LÍMITE DE VUELTAS");
+    if (espera > 0) { espera--; return; }
+    var esc = document.querySelector(".escena");
+    if (!esc) return;
+    var id = esc.dataset.paso;
+    if (id !== ultima) {
+      ultima = id; vistas.push(id); anota("escena: " + id); sinCambio = 0;
+      /* ?parar=<escena> deja el juego quieto en esa pantalla, para mirarla. */
+      if (parar && id === parar) { clearInterval(timer); document.getElementById("log").style.display = "none"; document.title = "listo"; return; }
+    }
+    else if (++sinCambio > 260) return terminar("ATASCO en " + id);
+
+    var refuerzo = document.querySelector(".refuerzo");
+    if (refuerzo) {
+      var ficha = refuerzo.querySelector(".ficha:not([hidden])");
+      if (ficha) { ficha.click(); return; }
+      var cerrar = refuerzo.querySelector(".cerrar-refuerzo");
+      if (cerrar) { anota("  refuerzo: " + refuerzo.querySelector(".refuerzo-frase b").textContent); cerrar.click(); }
+      return;
+    }
+    /* Lluvia de estrellas: se lee el cartel y se atrapa la que lleva el
+       resultado; las sueltas se recogen porque suman. Con `?falla=1` se toca
+       siempre una equivocada, para comprobar que no se lleva la corona. */
+    var cartel = document.getElementById("cartelLluvia");
+    if (cartel && !cartel.hidden) {
+      sinCambio = 0;                       /* la lluvia dura 15 s: no es un atasco */
+      var b = +cartel.textContent.match(/4 . (\d+)/)[1];
+      var resuelta = cartel.className.indexOf("cartel--bien") >= 0;
+      var conNumero = [].slice.call(document.querySelectorAll(".estrella[data-valor]"));
+      var elegida = conNumero.filter(function (e) {
+        return fallar ? +e.dataset.valor !== 4 * b : +e.dataset.valor === 4 * b;
+      })[0];
+      if (elegida && !resuelta) {
+        anota("  lluvia 4x" + b + " -> toca " + elegida.dataset.valor);
+        elegida.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      }
+      var suelta = document.querySelector(".estrella--suelta:not(.estrella--atrapada)");
+      if (suelta) suelta.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      return;
+    }
+    if (document.querySelector(".arena-final")) {
+      if (!anotadoFinal) {
+        anotadoFinal = true;
+        anota("  lluvia: " + document.querySelector(".arena-final").textContent.replace(/\s+/g, " ").trim());
+      }
+      /* Con ?repetir=1 se juega una segunda vez con el botón lateral, que es
+         donde se comprueba que la escena se puede reentrar sin dejar restos. */
+      var otra = document.querySelector("[data-accion='repetir-lluvia']");
+      if (repetir && otra && repeticiones < 1) {
+        repeticiones++; anotadoFinal = false;
+        anota("  botón lateral: \"" + otra.textContent + "\" -> otra partida");
+        otra.click();
+        espera = 12;
+        return;
+      }
+    }
+    if (document.querySelector(".modal")) { document.querySelector("[data-accion='cancelar-reinicio']").click(); return; }
+
+    var paso = Contenido.paso(Progreso.obtener().pasoActual);
+    var gemas = [].slice.call(document.querySelectorAll("[data-accion='responder']:not([disabled])"));
+    if (gemas.length) {
+      var esperada = paso.formato === "completar" ? paso.b : paso.a * paso.b;
+      if (fallar && (fallados[id] || 0) < 2) {
+        var mala = gemas.filter(function (g) { return Number(g.dataset.valor) !== esperada; })[0];
+        if (mala) {
+          fallados[id] = (fallados[id] || 0) + 1;
+          mala.click();
+          var msg = document.getElementById("mensajeReto");
+          anota("  falla " + mala.dataset.valor + " -> ayuda " + Progreso.obtener().nivelAyuda + " | " + (msg ? msg.textContent.slice(0, 46) : "?"));
+          var pista = document.querySelector("[data-accion='pista']");
+          if (pista && fallados[id] === 2) { pista.click(); anota("  clic pista -> ayuda " + Progreso.obtener().nivelAyuda); }
+          espera = 4;
+          return;
+        }
+      }
+      var acierto = gemas.filter(function (g) { return Number(g.dataset.valor) === esperada; })[0];
+      if (!acierto) return terminar("SIN OPCIÓN CORRECTA en " + id + " (esperaba " + esperada + ")");
+      anota("  responde " + esperada + " de [" + gemas.map(function (g) { return g.dataset.valor; }).join(",") + "]");
+      acierto.click(); espera = 14;
+      return;
+    }
+    var jefes = [].slice.call(document.querySelectorAll("[data-accion='responder-jefe']:not([disabled])"));
+    if (jefes.length) {
+      var texto = document.querySelector(".operacion-jefe").textContent;
+      var n = texto.match(/(\d+)\s*×\s*(\d+)/);
+      var r = Number(n[1]) * Number(n[2]);
+      var bien = jefes.filter(function (g) { return Number(g.dataset.valor) === r; })[0];
+      if (!bien) return terminar("SIN OPCIÓN CORRECTA jefe " + texto);
+      anota("  jefe " + n[1] + "×" + n[2] + " -> " + r);
+      bien.click(); espera = 20;
+      return;
+    }
+    ["jugar-minijuego", "empezar-jefe", "comenzar", "avanzar"].forEach(function (a) {
+      var b = document.querySelector("[data-accion='" + a + "']:not([disabled])");
+      if (b && !espera) { anota("  clic " + a); b.click(); espera = 14; }
+    });
+    if (id === "epilogo") terminar("FIN");
+
+    function terminar(motivo) {
+      clearInterval(timer);
+      var e = Progreso.obtener();
+      anota("\n== " + motivo + " ==");
+      anota("escenas visitadas: " + vistas.length + " -> " + vistas.join(" > "));
+      anota("cristales: " + e.cristales + "/3   tesoros: " + e.tesoros.join(",") + "   estrellas: " + e.estrellas);
+      anota("dominio: " + JSON.stringify(e.dominio));
+      anota("errores js: " + (errores.length ? errores.join(" | ") : "ninguno"));
+      document.getElementById("log").textContent = "RESULTADO\n" + lineas.join("\n");
+      document.title = "listo";
+    }
+  }, 60);
+});
+</script>
+</body></html>
